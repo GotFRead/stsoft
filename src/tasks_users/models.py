@@ -4,9 +4,9 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
 
-class Task(Base):
+class Tasks(Base):
     __tablename__ = "tasks"
     task_id: Mapped[str]
     description: Mapped[str]
-    owner: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete='CASCADE')) 
+    owner: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete='CASCADE')) 
     activity: Mapped[int]
