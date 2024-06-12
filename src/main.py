@@ -18,17 +18,15 @@ loop = asyncio.get_event_loop()
 
 def run_migrations():
     alembic_config = Config("alembic.ini")
-    command.upgrade(alembic_config, "head")
+    command.upgrade(alembic_config, "718bcd5cfff0")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
-    run_migrations()
+    # run_migrations()    
 
     async with db_helper.engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
-
     yield
 
 
