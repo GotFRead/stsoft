@@ -1,10 +1,33 @@
+from . import actions
+from . import schemas
+
 # __fastapi_depend__
 
 from fastapi import APIRouter
 from fastapi import Request
 
-from src.helpers.file_helper import get_static_file
 # __router__
 
-router = APIRouter(tags=["users"])
+router = APIRouter(prefix="/users", tags=["users"])
 
+# __handlers__
+
+# TODO
+# @router.get("/users")
+# def login():
+#     return get_static_file('pages', 'login_page.html')
+
+
+@router.post("/")
+async def create_user(user_info: schemas.CreateUser):
+    return await actions.create_user(user_info)
+
+
+@router.patch("/")
+async def patch_user(user_info: schemas.PatchUser):
+    return await actions.patch_user(user_info)
+
+
+@router.delete("/")
+async def delete_user(user_info: schemas.DeleteUser):
+    return await actions.delete_user(user_info)
