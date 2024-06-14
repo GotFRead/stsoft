@@ -2,12 +2,12 @@ import asyncio
 
 from . import schemas
 from . import models
+from sqlalchemy import select
 
 from fastapi import status
 from models.db_helper import db_helper
 from helpers.logger import create_logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 
 logger = create_logger("timeline_actions.log")
@@ -105,7 +105,7 @@ async def __delete_task(user_schemas: schemas.DeleteTask):
         session = db_helper.get_scoped_session()
 
         logger.info(f"Start remove task - {user_schemas}")
-        removed_user: models.Users = await __get_task_via_id(
+        removed_user: models.Users = await get_task_via_id(
             session=session, user_id=user_schemas.id
         )
         await session.delete(removed_user)
@@ -122,7 +122,7 @@ async def __update_task_info_partial(
     session: AsyncSession, task_schemas: schemas.CreateTask
 ):
 
-    changed_user: models.Tasks = await __get_task_via_id(
+    changed_user: models.Tasks = await get_task_via_id(
         session=session, user_id=task_schemas.id
     )
 
@@ -134,5 +134,13 @@ async def __update_task_info_partial(
     return changed_user
 
 
-async def __get_task_via_id(session: AsyncSession, user_id: int):
-    return await session.get(models.Tasks, user_id)
+async def get_task_via_id(session: AsyncSession, task_id: int):
+    return await session.get(models.Tasks, task_id)
+
+
+async def get_all_tasks():
+    session = db_helper.get_scoped_session()
+    request = select(models.Tasks).order_by(models.Tasks.id)
+    result = await session.execute(request)
+    timelines = result.scalars().all()  # (id, prod)
+    return timelines
