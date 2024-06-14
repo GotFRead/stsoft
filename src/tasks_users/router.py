@@ -9,12 +9,12 @@ from fastapi import Request
 
 # __router__
 
-router = APIRouter(tags=["tasks"])
+router = APIRouter(tags=["tasks"], prefix="/tasks")
 
 
 @router.get("/")
 async def get_all_tasks():
-    return await actions.get_all_timelines()
+    return await actions.get_all_tasks()
 
 
 @router.post("/create_task")
@@ -27,6 +27,6 @@ async def stop_task(task: schemas.DeleteTask):
     return await actions.stop_timeline(task)
 
 
-@router.delete("/")
+@router.delete("/delete_task")
 async def remove_task(task: schemas.DeleteTask):
     return await actions.delete_task(task)
