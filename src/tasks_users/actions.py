@@ -76,10 +76,10 @@ async def patch_task(task_schemas: schemas.PatchTask):
     return result
 
 
-async def delete_task(user_schemas: schemas.DeleteTask):
+async def delete_task(task_schemas: schemas.DeleteTask):
     try:
         result = await asyncio.wait_for(
-            __delete_task(user_schemas), timeout_execute_command
+            __delete_task(task_schemas), timeout_execute_command
         )
 
     except asyncio.TimeoutError as err:
@@ -110,13 +110,13 @@ async def __patch_task(user_schemas: schemas.CreateTask):
     return status.HTTP_200_OK
 
 
-async def __delete_task(user_schemas: schemas.DeleteTask):
+async def __delete_task(task_schemas: schemas.DeleteTask):
     try:
         session = db_helper.get_scoped_session()
 
-        logger.info(f"Start remove task - {user_schemas}")
+        logger.info(f"Start remove task - {task_schemas}")
         removed_user: models.Users = await get_task_via_id(
-            session=session, user_id=user_schemas.id
+            session=session, task_id=task_schemas.id
         )
         await session.delete(removed_user)
 
