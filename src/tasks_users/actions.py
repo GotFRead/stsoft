@@ -2,12 +2,14 @@ import asyncio
 
 from . import schemas
 from . import models
+from . import dependencies
 from sqlalchemy import select
 
 from fastapi import status
 from models.db_helper import db_helper
 from helpers.logger import create_logger
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
 
 
 logger = create_logger("timeline_actions.log")
@@ -36,6 +38,14 @@ async def __create_new_task(task_schemas: schemas.CreateTask):
     logger.info(f"Start create task - {task_schemas}")
     try:
         session = db_helper.get_scoped_session()
+
+        task_schemas.activity = datetime.strptime(
+            task_schemas.activity,
+            schemas.ACTIVITY_TIME_FORMAT,
+        )
+        task_schemas.activity = dependencies.SummaryActivity(
+            task_schemas.activity.hour, task_schemas.activity.minute
+        ).__str__()
 
         new_task = models.Tasks(**task_schemas.dict())
 
