@@ -53,6 +53,10 @@ class GetTimelinesForSpecifiedUser(GetTimelinesAllUsers):
     user_id: int
 
 
+class GetSummaryTimelinesForSpecifiedUser(GetTimelinesAllUsers):
+    user_id: int
+
+
 class GetActivityForSpecifiedUser(GetTimelinesAllUsers):
     user_id: int
 

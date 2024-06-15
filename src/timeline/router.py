@@ -40,3 +40,12 @@ async def get_timelines_for_specified_user(
     return await actions.get_all_timeline_in_the_range_for_specified_user(
         timeline_schema
     )
+
+
+@router.post("/get_summary_timeline_for_specified_user")
+async def get_summary_timeline_for_specified_user(
+    timeline_schema: schemas.GetSummaryTimelinesForSpecifiedUser,
+):
+    return await actions.get_summary_timelines_for_specified_user(
+        timeline_schema
+    )

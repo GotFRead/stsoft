@@ -106,6 +106,47 @@ async def get_timelines_all_users(
     return result
 
 
+async def get_summary_timelines_for_specified_user(
+    timeline_schema: schemas.GetSummaryTimelinesForSpecifiedUser,
+):
+    try:
+        result = await asyncio.wait_for(
+            __get_summary_timelines_for_specified_user(timeline_schema),
+            timeout_execute_command,
+        )
+
+    except asyncio.TimeoutError as err:
+        logger.error(f"create_user raise exception - {err}")
+        result = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    except Exception as err:
+        logger.error(f"create_user raise exception - {err}")
+        result = status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    return result
+
+
+async def __get_summary_timelines_for_specified_user(
+    timeline_schema: schemas.GetSummaryTimelinesForSpecifiedUser,
+):
+    summary_activity = {
+        "user_id": timeline_schema.user_id,
+        "summary": get_summary_activity(
+            int(schemas.ACTIVITY_TIME_FORMAT.split(":")[0]),
+            int(schemas.ACTIVITY_TIME_FORMAT.split(":")[1]),
+        )
+    }
+
+    timelines = await get_users_timelines(timeline_schema)
+
+    for timeline in timelines:
+        timeline_activity_ = get_active_summary_activity_from_task(timeline)
+        summary_activity["summary"].hours += timeline_activity_.hours
+        summary_activity["summary"].minutes += timeline_activity_.minutes
+
+    return summary_activity
+
+
 async def __get_timelines_all_users(
     timeline_schema: schemas.GetTimelinesAllUsers,
 ):
@@ -267,19 +308,7 @@ async def get_all_timeline_in_the_range_for_specified_user(
     )
     try:
 
-        compile_timelines_range(timeline_schema)
-
-        timelines: list[schemas.CreateTimeline] = await get_all_timelines()
-
-        suitable_timelines = __get_all_timeline_in_the_range(
-            timeline_schema.time_start, timeline_schema.time_end, timelines
-        )
-
-        result = get_timelines_for_specified_user(
-            suitable_timelines, timeline_schema.user_id
-        )
-
-        result = qsort_timelines(result)
+        result = qsort_timelines(await get_users_timelines(timeline_schema))
 
     except Exception as err:
         logger.error(
@@ -288,6 +317,21 @@ async def get_all_timeline_in_the_range_for_specified_user(
         return status.HTTP_400_BAD_REQUEST
 
     return result
+
+
+async def get_users_timelines(timeline_schema):
+
+    compile_timelines_range(timeline_schema)
+
+    timelines: list[schemas.CreateTimeline] = await get_all_timelines()
+
+    suitable_timelines = __get_all_timeline_in_the_range(
+        timeline_schema.time_start, timeline_schema.time_end, timelines
+    )
+
+    return get_timelines_for_specified_user(
+        suitable_timelines, timeline_schema.user_id
+    )
 
 
 def get_activity_second(activity: str):
