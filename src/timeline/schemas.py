@@ -16,6 +16,7 @@ class CreateTimeline(BaseModel):
     id: int = -1
     task_id: int
     owner_id: int
+    description: Annotated[str, MaxLen(256)] = "No comments"
     time_start: str | datetime = (
         f"{datetime.now().strftime(SHORT_TIME_FORMAT)} --:--"
     )
@@ -46,6 +47,14 @@ class GetTimelinesAllUsers(BaseModel):
     time_end: str | datetime = (
         f"{datetime.today().strftime(SHORT_TIME_FORMAT)} --:--"
     )
+
+
+class GetTimelinesForSpecifiedUser(GetTimelinesAllUsers):
+    user_id: int
+
+
+class GetActivityForSpecifiedUser(GetTimelinesAllUsers):
+    user_id: int
 
 
 class DeleteTimeline(BaseModel):

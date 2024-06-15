@@ -253,8 +253,14 @@ def __get_timeline_activity(timeline_schema: schemas.CreateTimeline):
     timeline_schema.activity = str(modified_task_summary_activity)
 
 
-async def __get_all_timeline_in_the_range_for_specified_user(
-    timeline_schema: schemas.GetTimelinesAllUsers,
+async def get_activity_in_the_range_for_specified_user(
+    timeline_schema: schemas.GetTimelinesForSpecifiedUser,
+):
+    pass
+
+
+async def get_all_timeline_in_the_range_for_specified_user(
+    timeline_schema: schemas.GetTimelinesForSpecifiedUser,
 ):
     logger.info(
         f"Start __get_all_timeline_in_the_range_for_specified_user TimeIntervals - {timeline_schema}"
@@ -265,15 +271,80 @@ async def __get_all_timeline_in_the_range_for_specified_user(
 
         timelines: list[schemas.CreateTimeline] = await get_all_timelines()
 
-        result = __get_all_timeline_in_the_range(
+        suitable_timelines = __get_all_timeline_in_the_range(
             timeline_schema.time_start, timeline_schema.time_end, timelines
         )
+
+        result = get_timelines_for_specified_user(
+            suitable_timelines, timeline_schema.user_id
+        )
+
+        result = qsort_timelines(result)
 
     except Exception as err:
         logger.error(
             f"__get_all_timeline_in_the_range_for_specified_user raise exception - {err}"
         )
         return status.HTTP_400_BAD_REQUEST
+
+    return result
+
+
+def get_activity_second(activity: str):
+    hours, minutes = activity.split(":")
+
+    return int(hours) * 3600 + int(minutes) * 60
+
+
+def sort(array):
+    """Sort the array by using quicksort."""
+
+    less = []
+    equal = []
+    greater = []
+
+    if len(array) > 1:
+        pivot = array[0]
+        for x in array:
+            if x[1] < pivot[1]:
+                less.append(x)
+            elif x[1] == pivot[1]:
+                equal.append(x)
+            elif x[1] > pivot[1]:
+                greater.append(x)
+        # Don't forget to return something!
+        return (
+            sort(less) + equal + sort(greater)
+        )  # Just use the + operator to join lists
+    # Note that you want equal ^^^^^ not pivot
+    else:  # You need to handle the part at the end of the recursion - when you only have one element in your array, just return the array.
+        return array
+
+
+def qsort_timelines(array):
+    """Sort the array by using quicksort."""
+
+    result = []
+
+    tasks_seconds_array = [
+        (x, get_activity_second(array[x].activity)) for x in range(len(array))
+    ]
+
+    res = sort(tasks_seconds_array)[::-1]
+
+    for x in res:
+        result.append(array[x[0]])
+
+    return result
+
+
+def get_timelines_for_specified_user(
+    timelines: list[schemas.CreateTimeline], user_id: int
+):
+    result = []
+    for timeline in timelines:
+        if timeline.owner_id == user_id:
+            result.append(timeline)
 
     return result
 

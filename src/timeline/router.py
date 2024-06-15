@@ -31,3 +31,12 @@ async def get_timelines_all_users(
     timeline_schema: schemas.GetTimelinesAllUsers,
 ):
     return await actions.get_timelines_all_users(timeline_schema)
+
+
+@router.post("/get_timelines_for_specified_user")
+async def get_timelines_for_specified_user(
+    timeline_schema: schemas.GetTimelinesForSpecifiedUser,
+):
+    return await actions.get_all_timeline_in_the_range_for_specified_user(
+        timeline_schema
+    )
