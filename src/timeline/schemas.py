@@ -36,5 +36,14 @@ class StopTimeline(BaseModel):
     id: int = -1
 
 
+class GetTimelinesAllUsers(BaseModel):
+    time_start: str | datetime = (
+        f"{datetime.today().strftime(SHORT_TIME_FORMAT)} --:--"
+    )
+    time_end: str | datetime = (
+        f"{datetime.today().strftime(SHORT_TIME_FORMAT)} --:--"
+    )
+
+
 class DeleteTimeline(BaseModel):
     id: int

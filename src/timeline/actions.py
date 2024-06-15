@@ -23,6 +23,7 @@ DEFAULT_TIME = "--:--"
 TIME_FORMAT = "%Y-%m-%d %H:%M"
 NOT_COMPILE_TIME_FORMAT = "%Y-%m-%d 00:00"
 DELTA_TIME_FORMAT = "%H:%M"
+TODAY_END_TIME_FORMAT = "%Y-%m-%d 23:59"
 
 
 async def get_all_timelines():
@@ -85,6 +86,103 @@ async def stop_timeline(timeline_schema: schemas.StopTimeline):
 
     return result
 
+
+async def get_timelines_all_users(
+    timeline_schema: schemas.GetTimelinesAllUsers,
+):
+    try:
+        result = await asyncio.wait_for(
+            __get_timelines_all_users(timeline_schema), timeout_execute_command
+        )
+
+    except asyncio.TimeoutError as err:
+        logger.error(f"create_user raise exception - {err}")
+        result = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    except Exception as err:
+        logger.error(f"create_user raise exception - {err}")
+        result = status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    return result
+
+
+async def __get_timelines_all_users(
+    timeline_schema: schemas.GetTimelinesAllUsers,
+):
+    logger.info(f"Start get_all_timelines TimeIntervals - {timeline_schema}")
+    try:
+
+        compile_timelines_range(timeline_schema)
+
+        timelines: list[schemas.CreateTimeline] = await get_all_timelines()
+
+        result = __get_all_timeline_in_the_range(
+            timeline_schema.time_start, timeline_schema.time_end, timelines
+        )
+
+    except Exception as err:
+        logger.error(f"get_all_timelines raise exception - {err}")
+        return status.HTTP_400_BAD_REQUEST
+
+    return result
+
+
+async def __get_all_timeline_in_the_range_for_specified_user(
+    timeline_schema: schemas.GetTimelinesAllUsers,
+):
+    logger.info(
+        f"Start __get_all_timeline_in_the_range_for_specified_user TimeIntervals - {timeline_schema}"
+    )
+    try:
+
+        compile_timelines_range(timeline_schema)
+
+        timelines: list[schemas.CreateTimeline] = await get_all_timelines()
+
+        result = __get_all_timeline_in_the_range(
+            timeline_schema.time_start, timeline_schema.time_end, timelines
+        )
+
+    except Exception as err:
+        logger.error(
+            f"__get_all_timeline_in_the_range_for_specified_user raise exception - {err}"
+        )
+        return status.HTTP_400_BAD_REQUEST
+
+    return result
+
+
+def compile_timelines_range(timeline_schema: schemas.GetTimelinesAllUsers):
+    timeline_schema.time_start = prepare_timeline_time(
+        timeline_schema.time_start
+        if DEFAULT_TIME not in timeline_schema.time_start
+        else datetime.now().strftime(NOT_COMPILE_TIME_FORMAT)
+    )
+
+    timeline_schema.time_end = prepare_timeline_time(
+        timeline_schema.time_end
+        if DEFAULT_TIME not in timeline_schema.time_end
+        else datetime.now().strftime(TODAY_END_TIME_FORMAT)
+    )
+
+
+def __get_all_timeline_in_the_range(
+    time_start: datetime,
+    time_stop: datetime,
+    timelines_list: list[schemas.CreateTimeline],
+):
+    result = []
+    for current_timeline in timelines_list:
+        # ? На подумать, нужно ли игнорировать не закрытые таймлайны
+        # if not check_close_timeline(current_timeline):
+        #     continue
+
+        if (time_start <= current_timeline.time_start) and (
+            current_timeline.time_end <= time_stop
+        ):
+            result.append(current_timeline)
+
+    return result
 
 async def __stop_timeline(timeline_schema: schemas.StopTimeline):
     logger.info(f"Start stop TimeIntervals - {timeline_schema}")
@@ -182,7 +280,6 @@ async def __actualization_task(
     )
 
     modified_task.activity = str(modified_task_summary_activity)
-
 
 
 def get_hours_and_minutes_from_delta(delta) -> list[int]:
