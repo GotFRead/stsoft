@@ -52,7 +52,7 @@ class SummaryActivity:
             result_value = int(value)
 
             if result_value >= 60:
-                self.hours = result_value // 60
+                self.hours += result_value // 60
                 result_value %= 60
 
             return result_value
