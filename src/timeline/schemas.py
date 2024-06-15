@@ -9,6 +9,7 @@ from datetime import datetime
 
 TIME_FORMAT = "%Y-%m-%d %H:%M"
 SHORT_TIME_FORMAT = "%Y-%m-%d"
+ACTIVITY_TIME_FORMAT = "00:00"
 
 
 class CreateTimeline(BaseModel):
@@ -21,6 +22,7 @@ class CreateTimeline(BaseModel):
     time_end: str | datetime = (
         f"{datetime.today().strftime(SHORT_TIME_FORMAT)} --:--"
     )
+    activity: str = f"{datetime.today().strftime(ACTIVITY_TIME_FORMAT)}"
 
 
 class PatchTimeline(CreateTimeline):
@@ -30,6 +32,7 @@ class PatchTimeline(CreateTimeline):
     description: Annotated[str, MaxLen(256)] = "This field will be not modified"
     time_start: str
     time_end: str = None
+    activity: str = "This field will be not modified"
 
 
 class StopTimeline(BaseModel):

@@ -13,5 +13,6 @@ class TimeIntervals(Base):
     owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE")
     )
-    time_start: Mapped[datetime] 
+    time_start: Mapped[datetime]
     time_end: Mapped[datetime]
+    activity: Mapped[str]

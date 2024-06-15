@@ -127,31 +127,6 @@ async def __get_timelines_all_users(
     return result
 
 
-async def __get_all_timeline_in_the_range_for_specified_user(
-    timeline_schema: schemas.GetTimelinesAllUsers,
-):
-    logger.info(
-        f"Start __get_all_timeline_in_the_range_for_specified_user TimeIntervals - {timeline_schema}"
-    )
-    try:
-
-        compile_timelines_range(timeline_schema)
-
-        timelines: list[schemas.CreateTimeline] = await get_all_timelines()
-
-        result = __get_all_timeline_in_the_range(
-            timeline_schema.time_start, timeline_schema.time_end, timelines
-        )
-
-    except Exception as err:
-        logger.error(
-            f"__get_all_timeline_in_the_range_for_specified_user raise exception - {err}"
-        )
-        return status.HTTP_400_BAD_REQUEST
-
-    return result
-
-
 def compile_timelines_range(timeline_schema: schemas.GetTimelinesAllUsers):
     timeline_schema.time_start = prepare_timeline_time(
         timeline_schema.time_start
@@ -184,6 +159,7 @@ def __get_all_timeline_in_the_range(
 
     return result
 
+
 async def __stop_timeline(timeline_schema: schemas.StopTimeline):
     logger.info(f"Start stop TimeIntervals - {timeline_schema}")
 
@@ -200,6 +176,8 @@ async def __stop_timeline(timeline_schema: schemas.StopTimeline):
         timeline.time_end = prepare_timeline_time(
             datetime.now().strftime(TIME_FORMAT)
         )
+
+        __get_timeline_activity(timeline)
 
         session.add(timeline)
 
@@ -230,6 +208,10 @@ async def __create_timeline(timeline_schema: schemas.CreateTimeline):
             datetime.now().strftime(NOT_COMPILE_TIME_FORMAT)
         )
     )
+    if timeline_schema.time_end.strftime(
+        TIME_FORMAT
+    ) != datetime.now().strftime(NOT_COMPILE_TIME_FORMAT):
+        __get_timeline_activity(timeline_schema)
 
     try:
         session = db_helper.get_scoped_session()
@@ -247,6 +229,53 @@ async def __create_timeline(timeline_schema: schemas.CreateTimeline):
         return status.HTTP_400_BAD_REQUEST
 
     return status.HTTP_200_OK
+
+
+def __get_timeline_activity(timeline_schema: schemas.CreateTimeline):
+    delta = timeline_schema.time_end - datetime.strptime(
+        timeline_schema.time_start.strftime(TIME_FORMAT), TIME_FORMAT
+    )
+
+    modified_task_summary_activity = get_summary_activity(
+        int(schemas.ACTIVITY_TIME_FORMAT.split(":")[0]),
+        int(schemas.ACTIVITY_TIME_FORMAT.split(":")[1]),
+    )
+
+    hours_delta, minute_delta = get_hours_and_minutes_from_delta(delta)
+
+    modified_task_summary_activity.hours = (
+        modified_task_summary_activity.hours + hours_delta
+    )
+    modified_task_summary_activity.minutes = (
+        modified_task_summary_activity.minutes + minute_delta
+    )
+
+    timeline_schema.activity = str(modified_task_summary_activity)
+
+
+async def __get_all_timeline_in_the_range_for_specified_user(
+    timeline_schema: schemas.GetTimelinesAllUsers,
+):
+    logger.info(
+        f"Start __get_all_timeline_in_the_range_for_specified_user TimeIntervals - {timeline_schema}"
+    )
+    try:
+
+        compile_timelines_range(timeline_schema)
+
+        timelines: list[schemas.CreateTimeline] = await get_all_timelines()
+
+        result = __get_all_timeline_in_the_range(
+            timeline_schema.time_start, timeline_schema.time_end, timelines
+        )
+
+    except Exception as err:
+        logger.error(
+            f"__get_all_timeline_in_the_range_for_specified_user raise exception - {err}"
+        )
+        return status.HTTP_400_BAD_REQUEST
+
+    return result
 
 
 async def __actualization_task(
