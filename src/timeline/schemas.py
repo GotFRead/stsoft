@@ -7,13 +7,20 @@ from pydantic import BaseModel
 
 from datetime import datetime
 
+TIME_FORMAT = "%Y-%m-%d %H:%M"
+SHORT_TIME_FORMAT = "%Y-%m-%d"
+
 
 class CreateTimeline(BaseModel):
     id: int = -1
     task_id: int
     owner_id: int
-    time_start: str = "00:00:00"
-    time_end: str = "00:00:00"
+    time_start: str | datetime = (
+        f"{datetime.now().strftime(SHORT_TIME_FORMAT)} --:--"
+    )
+    time_end: str | datetime = (
+        f"{datetime.today().strftime(SHORT_TIME_FORMAT)} --:--"
+    )
 
 
 class PatchTimeline(CreateTimeline):

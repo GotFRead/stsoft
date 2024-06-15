@@ -1,10 +1,12 @@
 import asyncio
 from datetime import datetime
+from datetime import timedelta
 
 from . import schemas
 from . import models
 from tasks_users import actions as task_actions
 from tasks_users import models as task_models
+from tasks_users import dependencies as task_dependencies
 
 from fastapi import status
 from models.db_helper import db_helper
@@ -17,7 +19,10 @@ logger = create_logger("timeline_actions.log")
 
 timeout_execute_command = 1000
 
-DEFAULT_TIME = "00:00:00"
+DEFAULT_TIME = "--:--"
+TIME_FORMAT = "%Y-%m-%d %H:%M"
+NOT_COMPILE_TIME_FORMAT = "%Y-%m-%d 00:00"
+DELTA_TIME_FORMAT = "%H:%M"
 
 
 async def get_all_timelines():
@@ -95,7 +100,7 @@ async def __stop_timeline(timeline_schema: schemas.StopTimeline):
             raise Exception("This is timeline CLOSE!")
 
         timeline.time_end = prepare_timeline_time(
-            datetime.now().strftime("%H:%M:%S")
+            datetime.now().strftime(TIME_FORMAT)
         )
 
         session.add(timeline)
@@ -116,11 +121,17 @@ async def __create_timeline(timeline_schema: schemas.CreateTimeline):
 
     timeline_schema.time_start = prepare_timeline_time(
         timeline_schema.time_start
-        if timeline_schema.time_start != DEFAULT_TIME
-        else datetime.now().strftime("%H:%M:%S")
+        if DEFAULT_TIME not in timeline_schema.time_start
+        else datetime.now().strftime(TIME_FORMAT)
     )
 
-    timeline_schema.time_end = prepare_timeline_time(timeline_schema.time_end)
+    timeline_schema.time_end = (
+        prepare_timeline_time(timeline_schema.time_end)
+        if DEFAULT_TIME not in timeline_schema.time_end
+        else prepare_timeline_time(
+            datetime.now().strftime(NOT_COMPILE_TIME_FORMAT)
+        )
+    )
 
     try:
         session = db_helper.get_scoped_session()
@@ -143,17 +154,51 @@ async def __create_timeline(timeline_schema: schemas.CreateTimeline):
 async def __actualization_task(
     session: AsyncSession, timeline_schema: schemas.CreateTimeline
 ):
-    if timeline_schema.time_end != prepare_timeline_time(DEFAULT_TIME):
-        modified_task: task_models.Tasks = await task_actions.get_task_via_id(
-            session, timeline_schema.task_id
-        )
 
-        delta = timeline_schema.time_end - datetime.strptime(
-            timeline_schema.time_start.strftime("%H:%M:%S"), "%H:%M:%S"
-        )
-        modified_task.activity += delta.seconds // 3600
+    if timeline_schema.time_end.strftime(
+        TIME_FORMAT
+    ) == datetime.now().strftime(NOT_COMPILE_TIME_FORMAT):
+        return None
 
-        task_actions.patch_task(modified_task)
+    modified_task: task_models.Tasks = await task_actions.get_task_via_id(
+        session, timeline_schema.task_id
+    )
+
+    delta = timeline_schema.time_end - datetime.strptime(
+        timeline_schema.time_start.strftime(TIME_FORMAT), TIME_FORMAT
+    )
+
+    modified_task_summary_activity = get_active_summary_activity_from_task(
+        modified_task
+    )
+
+    hours_delta, minute_delta = get_hours_and_minutes_from_delta(delta)
+
+    modified_task_summary_activity.hours = (
+        modified_task_summary_activity.hours + hours_delta
+    )
+    modified_task_summary_activity.minutes = (
+        modified_task_summary_activity.minutes + minute_delta
+    )
+
+    modified_task.activity = str(modified_task_summary_activity)
+
+
+
+def get_hours_and_minutes_from_delta(delta) -> list[int]:
+    hours_delta = delta.seconds // 3600
+    minute_delta = (delta.seconds % 3600) // 60
+    return [hours_delta, minute_delta]
+
+
+def get_active_summary_activity_from_task(task: task_models.Tasks):
+    return get_summary_activity(
+        int(task.activity.split(":")[0]), int(task.activity.split(":")[1])
+    )
+
+
+def get_summary_activity(hours: int, minutes: int):
+    return task_dependencies.SummaryActivity(hours, minutes)
 
 
 async def __patch_timeline(
@@ -179,13 +224,12 @@ async def __patch_timeline(
     except Exception as err:
         logger.error(f"__patch_timeline raise exception - {err}")
         return status.HTTP_400_BAD_REQUEST
-    return status.HTTP_200_OK
 
 
 def prepare_timeline_time(time: str):
     return datetime.strptime(
-        (time + ":00" if len(time.split(":")) == 2 else time),
-        "%H:%M:%S",
+        time,
+        TIME_FORMAT,
     )
 
 
@@ -194,4 +238,6 @@ async def get_timeline_via_id(session: AsyncSession, timeline_id: int):
 
 
 def check_close_timeline(timeline):
-    return timeline.time_end.strftime("%H:%M:%S") != DEFAULT_TIME
+    return timeline.time_end.strftime(TIME_FORMAT) != datetime.now().strftime(
+        NOT_COMPILE_TIME_FORMAT
+    )
