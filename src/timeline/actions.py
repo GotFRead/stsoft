@@ -13,7 +13,7 @@ from models.db_helper import db_helper
 from helpers.logger import create_logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-
+from copy import deepcopy
 
 logger = create_logger("timeline_actions.log")
 
@@ -24,6 +24,7 @@ TIME_FORMAT = "%Y-%m-%d %H:%M"
 NOT_COMPILE_TIME_FORMAT = "%Y-%m-%d 00:00"
 DELTA_TIME_FORMAT = "%H:%M"
 TODAY_END_TIME_FORMAT = "%Y-%m-%d 23:59"
+DATE_FORMAT = "%Y-%m-%d"
 
 
 async def get_all_timelines():
@@ -106,6 +107,319 @@ async def get_timelines_all_users(
     return result
 
 
+async def get_downtime_and_timelines_for_specified_user(
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+):
+    try:
+        result = await asyncio.wait_for(
+            __get_downtime_and_timelines_for_specified_user(timeline_schema),
+            timeout_execute_command,
+        )
+
+    except asyncio.TimeoutError as err:
+        logger.error(
+            f"get_downtime_and_timelines_for_specified_user raise exception - {err}"
+        )
+        result = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    except Exception as err:
+        logger.error(
+            f"get_downtime_and_timelines_for_specified_user raise exception - {err}"
+        )
+        result = status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    return result
+
+
+async def __get_downtime_and_timelines_for_specified_user(
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+):
+
+    timeline_schema.time_start = datetime.strptime(
+        timeline_schema.time_start, DATE_FORMAT
+    ).strftime(NOT_COMPILE_TIME_FORMAT)
+
+    timeline_schema.time_end = datetime.strptime(
+        timeline_schema.time_end, DATE_FORMAT
+    ).strftime(TODAY_END_TIME_FORMAT)
+
+    timelines: list[schemas.CreateTimeline] = await get_users_timelines(
+        timeline_schema
+    )
+
+    date_hashmap = compile_date_hashmap(timeline_schema)
+
+    add_timelines_to_hashmap(timelines, date_hashmap)
+    sort_timelines(date_hashmap)
+    add_downtimes_to_date_hashmap(date_hashmap, timeline_schema)
+    convert_result_to_dict(date_hashmap)
+
+    return date_hashmap
+
+
+def convert_result_to_dict(date_hashmap):
+    for date in date_hashmap:
+        for interval_index in range(len(date_hashmap[date])):
+            if hasattr(date_hashmap[date][interval_index], "dict"):
+                date_hashmap[date][interval_index] = (
+                    convert_schemas_class_to_dict(
+                        date_hashmap[date][interval_index]
+                    )
+                )
+
+            elif isinstance(
+                date_hashmap[date][interval_index], models.TimeIntervals
+            ):
+                convert_models_mapping_to_dict(
+                    date_hashmap[date][interval_index]
+                )
+
+            else:
+                continue
+
+
+def sort_timelines(date_hashmap: dict):
+    for date in date_hashmap:
+        date_hashmap[date] = qsort_timelines_for_time_start(date_hashmap[date])
+
+
+def add_timelines_to_hashmap(timelines: schemas.CreateTimeline, hashmap: dict):
+    # add timelines to hashmap
+    for timeline in timelines:
+        timeline_start_date = timeline.time_start.strftime(DATE_FORMAT)
+
+        hashmap[timeline_start_date].append(timeline)
+
+
+def convert_schemas_class_to_dict(schemas_class: schemas.CreateTimeline):
+    key_and_values = dict(schemas_class.__dict__.items())
+    schemas_class__ = {
+        f"{key}": key_and_values[key] for key in schemas_class.model_fields
+    }
+
+    return schemas_class__
+
+
+def convert_models_mapping_to_dict(models_mapping: models.TimeIntervals):
+    models_mapping = {
+        f"{key}": value
+        for key, value in models_mapping.__table__.columns.items()
+    }
+
+
+def get_timeline_interval(time_start: datetime, time_end: datetime):
+    timeline_start_time = time_start.strftime(DELTA_TIME_FORMAT)
+    timeline_end_time = time_end.strftime(DELTA_TIME_FORMAT)
+
+    return f"{timeline_start_time}-{timeline_end_time}"
+
+
+def compile_date_hashmap(timeline_schema):
+    date_hashmap = dict()
+    start_date = timeline_schema.time_start.date()
+    end_date = timeline_schema.time_end.date()
+
+    date_delta = end_date - start_date
+
+    for day in range(date_delta.days + 1):
+        _temp_date = datetime(
+            start_date.year, start_date.month, start_date.day + day
+        )
+        date_hashmap[_temp_date.strftime(DATE_FORMAT)] = list()
+
+    return date_hashmap
+
+
+def add_downtimes_to_date_hashmap(
+    date_hashmap: dict, timeline_schema: schemas.GetDowntimeForSpecifiedUser
+):
+    for date in deepcopy(date_hashmap):
+        if len(date_hashmap[date]) == 0:
+            date_hashmap[date] = [
+                convert_schemas_class_to_dict(
+                    __compile_downtime_day(timeline_schema)
+                )
+            ]
+            continue
+
+        result = list()
+
+        for timelines_index in range(len(date_hashmap[date])):
+            timeline: models.TimeIntervals = deepcopy(
+                date_hashmap[date][timelines_index]
+            )
+            if timelines_index == 0:
+                if (
+                    timeline.time_start.strftime(DELTA_TIME_FORMAT)
+                    == timeline_schema.time_start_work
+                ):
+                    result.append(timeline)
+                    continue
+
+                downtime_timeline = compile_downtime_for_start_time_interval(
+                    date, timeline_schema, timeline
+                )
+
+                result.append(convert_schemas_class_to_dict(downtime_timeline))
+                result.append(timeline)
+            else:
+                previous_timeline: models.TimeIntervals = date_hashmap[date][
+                    timelines_index - 1
+                ]
+                if previous_timeline.time_end.strftime(
+                    DELTA_TIME_FORMAT
+                ) == timeline.time_start.strftime(DELTA_TIME_FORMAT):
+                    continue
+
+                downtime_timeline = compile_downtime_for_middle_time_interval(
+                    date, timeline, previous_timeline, timeline_schema
+                )
+
+                result.append(convert_schemas_class_to_dict(downtime_timeline))
+                result.append(timeline)
+
+            if timelines_index == len(date_hashmap[date]) - 1:
+                if (
+                    timeline.time_end.strftime(DELTA_TIME_FORMAT)
+                    == timeline_schema.time_end_work
+                ):
+                    continue
+
+                downtime_timeline = compile_downtime_for_end_time_interval(
+                    date, timeline, timeline_schema
+                )
+
+                result.append(convert_schemas_class_to_dict(downtime_timeline))
+
+        date_hashmap[date] = result
+
+    return date_hashmap
+
+
+def compile_downtime_for_start_time_interval(
+    date: str, timeline_schema, timeline: models.TimeIntervals
+):
+    return get_downtime_timeline(
+        datetime(
+            year=int(date.split("-")[0]),
+            month=int(date.split("-")[1]),
+            day=int(date.split("-")[2]),
+            hour=int(timeline_schema.time_start_work.split(":")[0]),
+            minute=int(timeline_schema.time_start_work.split(":")[1]),
+        ),
+        datetime(
+            year=int(date.split("-")[0]),
+            month=int(date.split("-")[1]),
+            day=int(date.split("-")[2]),
+            hour=int(timeline.time_start.hour),
+            minute=int(timeline.time_start.minute),
+        ),
+        timeline_schema.user_id,
+    )
+
+
+def compile_downtime_for_middle_time_interval(
+    date: str,
+    timeline: models.TimeIntervals,
+    previous_timeline: models.TimeIntervals,
+    timeline_schema,
+):
+    return get_downtime_timeline(
+        datetime(
+            year=int(date.split("-")[0]),
+            month=int(date.split("-")[1]),
+            day=int(date.split("-")[2]),
+            hour=int(previous_timeline.time_end.hour),
+            minute=int(previous_timeline.time_end.minute),
+        ),
+        datetime(
+            year=int(date.split("-")[0]),
+            month=int(date.split("-")[1]),
+            day=int(date.split("-")[2]),
+            hour=int(timeline.time_start.hour),
+            minute=int(timeline.time_start.minute),
+        ),
+        timeline_schema.user_id,
+    )
+
+
+def compile_downtime_for_end_time_interval(
+    date: str,
+    timeline: models.TimeIntervals,
+    timeline_schema,
+):
+    return get_downtime_timeline(
+        datetime(
+            year=int(date.split("-")[0]),
+            month=int(date.split("-")[1]),
+            day=int(date.split("-")[2]),
+            hour=int(timeline.time_end.hour),
+            minute=int(timeline.time_end.minute),
+        ),
+        datetime(
+            year=int(date.split("-")[0]),
+            month=int(date.split("-")[1]),
+            day=int(date.split("-")[2]),
+            hour=int(timeline_schema.time_end_work.split(":")[0]),
+            minute=int(timeline_schema.time_end_work.split(":")[1]),
+        ),
+        timeline_schema.user_id,
+    )
+
+
+def get_downtime_timeline(
+    time_start: datetime, time_end: datetime, user_id: int
+):
+    return __create_temp_timeline(
+        time_start,
+        time_end,
+        user_id,
+    )
+
+
+def __compile_downtime_day(
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+):
+    return __create_downtime_via_timeline_schema(timeline_schema)
+
+
+def __create_downtime_via_timeline_schema(
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+):
+    return __create_temp_timeline(
+        datetime.now().strptime(
+            timeline_schema.time_start_work, DELTA_TIME_FORMAT
+        ),
+        datetime.now().strptime(
+            timeline_schema.time_end_work, DELTA_TIME_FORMAT
+        ),
+        timeline_schema.user_id,
+    )
+
+
+def __create_temp_timeline(
+    time_start: datetime,
+    time_end: datetime,
+    owner_id: int,
+    task_id: str = "EXECUTABLE TASK NOT FOUND!",
+    description: str = "DOWNTIME",
+    activity="00:00",
+    id_: str = "This is downtime timeline, 'id' - NOT EXIST",
+):
+    timeline = schemas.CreateTimeline
+    timeline.time_start = time_start
+    timeline.time_end = time_end
+    timeline.owner_id = owner_id
+    timeline.task_id = task_id
+    timeline.activity = activity
+    timeline.id = id_
+    timeline.description = description
+
+    __compile_activity(timeline, timeline)
+
+    return timeline
+
+
 async def get_summary_timelines_for_specified_user(
     timeline_schema: schemas.GetSummaryTimelinesForSpecifiedUser,
 ):
@@ -134,7 +448,7 @@ async def __get_summary_timelines_for_specified_user(
         "summary": get_summary_activity(
             int(schemas.ACTIVITY_TIME_FORMAT.split(":")[0]),
             int(schemas.ACTIVITY_TIME_FORMAT.split(":")[1]),
-        )
+        ),
     }
 
     timelines = await get_users_timelines(timeline_schema)
@@ -308,7 +622,9 @@ async def get_all_timeline_in_the_range_for_specified_user(
     )
     try:
 
-        result = qsort_timelines(await get_users_timelines(timeline_schema))
+        result = qsort_timelines_for_activity(
+            await get_users_timelines(timeline_schema)
+        )
 
     except Exception as err:
         logger.error(
@@ -365,16 +681,38 @@ def sort(array):
         return array
 
 
+def qsort_timelines_for_time_start(array):
+    result = []
+    tasks_seconds_array = [(x, array[x].time_start) for x in range(len(array))]
+
+    res = qsort_timelines(tasks_seconds_array)
+
+    for x in res:
+        result.append(array[x[0]])
+
+    return result
+
+
+def qsort_timelines_for_activity(array):
+    result = []
+    tasks_seconds_array = [
+        (x, get_activity_second(array[x].activity)) for x in range(len(array))
+    ]
+
+    res = qsort_timelines(tasks_seconds_array)[::-1]
+
+    for x in res:
+        result.append(array[x[0]])
+
+    return result
+
+
 def qsort_timelines(array):
     """Sort the array by using quicksort."""
 
     result = []
 
-    tasks_seconds_array = [
-        (x, get_activity_second(array[x].activity)) for x in range(len(array))
-    ]
-
-    res = sort(tasks_seconds_array)[::-1]
+    res = sort(array)
 
     for x in res:
         result.append(array[x[0]])
@@ -406,24 +744,38 @@ async def __actualization_task(
         session, timeline_schema.task_id
     )
 
+    __compile_activity(timeline_schema, modified_task)
+
+
+def __compile_activity(
+    timeline_schema: schemas.CreateTimeline, modified_activity_object: object
+):
+
     delta = timeline_schema.time_end - datetime.strptime(
         timeline_schema.time_start.strftime(TIME_FORMAT), TIME_FORMAT
     )
 
-    modified_task_summary_activity = get_active_summary_activity_from_task(
-        modified_task
-    )
+    if isinstance(modified_activity_object, task_models.Tasks):
+        modified_summary_activity = get_active_summary_activity_from_task(
+            modified_activity_object
+        )
+    elif modified_activity_object == schemas.CreateTimeline:
+        modified_summary_activity = get_summary_activity_from_timeline_schema(
+            modified_activity_object
+        )
+    else:
+        raise Exception("Found UNKNOWN class modified_activity_object !")
 
     hours_delta, minute_delta = get_hours_and_minutes_from_delta(delta)
 
-    modified_task_summary_activity.hours = (
-        modified_task_summary_activity.hours + hours_delta
+    modified_summary_activity.hours = (
+        modified_summary_activity.hours + hours_delta
     )
-    modified_task_summary_activity.minutes = (
-        modified_task_summary_activity.minutes + minute_delta
+    modified_summary_activity.minutes = (
+        modified_summary_activity.minutes + minute_delta
     )
 
-    modified_task.activity = str(modified_task_summary_activity)
+    modified_activity_object.activity = str(modified_summary_activity)
 
 
 def get_hours_and_minutes_from_delta(delta) -> list[int]:
@@ -435,6 +787,15 @@ def get_hours_and_minutes_from_delta(delta) -> list[int]:
 def get_active_summary_activity_from_task(task: task_models.Tasks):
     return get_summary_activity(
         int(task.activity.split(":")[0]), int(task.activity.split(":")[1])
+    )
+
+
+def get_summary_activity_from_timeline_schema(
+    timeline_schema: schemas.CreateTimeline,
+):
+    return get_summary_activity(
+        int(timeline_schema.activity.split(":")[0]),
+        int(timeline_schema.activity.split(":")[1]),
     )
 
 

@@ -49,3 +49,12 @@ async def get_summary_timeline_for_specified_user(
     return await actions.get_summary_timelines_for_specified_user(
         timeline_schema
     )
+
+
+@router.post("/get_downtime_and_timeline_for_specified_user")
+async def get_downtime_and_timelines_for_specified_user(
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+):
+    return await actions.get_downtime_and_timelines_for_specified_user(
+        timeline_schema
+    )

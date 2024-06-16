@@ -10,6 +10,8 @@ from datetime import datetime
 TIME_FORMAT = "%Y-%m-%d %H:%M"
 SHORT_TIME_FORMAT = "%Y-%m-%d"
 ACTIVITY_TIME_FORMAT = "00:00"
+DEFAULT_START_OF_WORKING_HOURS = "09:00"
+DEFAULT_END_OF_WORKING_HOURS = "18:00"
 
 
 class CreateTimeline(BaseModel):
@@ -59,6 +61,21 @@ class GetSummaryTimelinesForSpecifiedUser(GetTimelinesAllUsers):
 
 class GetActivityForSpecifiedUser(GetTimelinesAllUsers):
     user_id: int
+
+
+class GetDowntimeForSpecifiedUser(GetActivityForSpecifiedUser):
+    time_start: str | datetime = (
+        f"{datetime.today().strftime(SHORT_TIME_FORMAT)}"
+    )
+    time_end: str | datetime = (
+        f"{datetime.today().strftime(SHORT_TIME_FORMAT)}"
+    )
+    time_start_work: str | datetime = (
+        f"{datetime.today().strftime(DEFAULT_START_OF_WORKING_HOURS)}"
+    )
+    time_end_work: str | datetime = (
+        f"{datetime.today().strftime(DEFAULT_END_OF_WORKING_HOURS)}"
+    )
 
 
 class DeleteTimeline(BaseModel):
