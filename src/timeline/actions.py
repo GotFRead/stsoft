@@ -28,28 +28,40 @@ DATE_FORMAT = "%Y-%m-%d"
 
 
 async def get_all_timelines():
+    logger.log_start(get_all_timelines, dict())
 
-    session = db_helper.get_scoped_session()
+    try:
+        session = db_helper.get_scoped_session()
 
-    request = select(models.TimeIntervals).order_by(models.TimeIntervals.id)
-    result = await session.execute(request)
-    timelines = result.scalars().all()  # (id, prod)
-    return timelines
+        request = select(models.TimeIntervals).order_by(models.TimeIntervals.id)
+        result = await session.execute(request)
+        result = result.scalars().all()  # (id, prod)
+    except Exception as err:
+        result = status.HTTP_500_INTERNAL_SERVER_ERROR
+        logger.log_exception(get_all_timelines, dict(), err)
+
+    logger.log_complete(get_all_timelines, dict())
+
+    return result
 
 
 async def create_new_timeline(timeline_schema: schemas.CreateTimeline):
+    logger.log_start(create_new_timeline, timeline_schema)
+
     try:
         result = await asyncio.wait_for(
             __create_timeline(timeline_schema), timeout_execute_command
         )
 
     except asyncio.TimeoutError as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(create_new_timeline, dict(), err)
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(create_new_timeline, dict(), err)
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    logger.log_complete(create_new_timeline, dict())
 
     return result
 
@@ -72,18 +84,22 @@ async def start_timeline(timeline_schema: schemas.CreateTimeline):
 
 
 async def stop_timeline(timeline_schema: schemas.StopTimeline):
+    logger.log_start(stop_timeline, timeline_schema)
+
     try:
         result = await asyncio.wait_for(
             __stop_timeline(timeline_schema), timeout_execute_command
         )
 
     except asyncio.TimeoutError as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(stop_timeline, timeline_schema, err)
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(stop_timeline, timeline_schema, err)
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    logger.log_complete(stop_timeline, timeline_schema)
 
     return result
 
@@ -91,25 +107,32 @@ async def stop_timeline(timeline_schema: schemas.StopTimeline):
 async def get_timelines_all_users(
     timeline_schema: schemas.GetTimelinesAllUsers,
 ):
+    logger.log_start(get_timelines_all_users, timeline_schema)
+
     try:
         result = await asyncio.wait_for(
             __get_timelines_all_users(timeline_schema), timeout_execute_command
         )
 
     except asyncio.TimeoutError as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(get_timelines_all_users, timeline_schema, err)
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(get_timelines_all_users, timeline_schema, err)
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
 
+    logger.log_complete(get_timelines_all_users, timeline_schema)
     return result
 
 
 async def get_downtime_and_timelines_for_specified_user(
     timeline_schema: schemas.GetDowntimeForSpecifiedUser,
 ):
+    logger.log_start(
+        get_downtime_and_timelines_for_specified_user, timeline_schema
+    )
+
     try:
         result = await asyncio.wait_for(
             __get_downtime_and_timelines_for_specified_user(timeline_schema),
@@ -117,16 +140,21 @@ async def get_downtime_and_timelines_for_specified_user(
         )
 
     except asyncio.TimeoutError as err:
-        logger.error(
-            f"get_downtime_and_timelines_for_specified_user raise exception - {err}"
+        logger.log_exception(
+            get_downtime_and_timelines_for_specified_user, timeline_schema, err
         )
+
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.error(
-            f"get_downtime_and_timelines_for_specified_user raise exception - {err}"
+        logger.log_exception(
+            get_downtime_and_timelines_for_specified_user, timeline_schema, err
         )
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    logger.log_complete(
+        get_downtime_and_timelines_for_specified_user, timeline_schema
+    )
 
     return result
 
@@ -423,6 +451,7 @@ def __create_temp_timeline(
 async def get_summary_timelines_for_specified_user(
     timeline_schema: schemas.GetSummaryTimelinesForSpecifiedUser,
 ):
+    logger.log_start(get_summary_timelines_for_specified_user, timeline_schema)
     try:
         result = await asyncio.wait_for(
             __get_summary_timelines_for_specified_user(timeline_schema),
@@ -430,13 +459,20 @@ async def get_summary_timelines_for_specified_user(
         )
 
     except asyncio.TimeoutError as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(
+            get_summary_timelines_for_specified_user, timeline_schema, err
+        )
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(
+            get_summary_timelines_for_specified_user, timeline_schema, err
+        )
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
 
+    logger.log_complete(
+        get_summary_timelines_for_specified_user, timeline_schema
+    )
     return result
 
 
@@ -464,7 +500,7 @@ async def __get_summary_timelines_for_specified_user(
 async def __get_timelines_all_users(
     timeline_schema: schemas.GetTimelinesAllUsers,
 ):
-    logger.info(f"Start get_all_timelines TimeIntervals - {timeline_schema}")
+    logger.log_start(__get_timelines_all_users, timeline_schema)
     try:
 
         compile_timelines_range(timeline_schema)
@@ -476,9 +512,10 @@ async def __get_timelines_all_users(
         )
 
     except Exception as err:
-        logger.error(f"get_all_timelines raise exception - {err}")
+        logger.log_exception(__get_timelines_all_users, timeline_schema, err)
         return status.HTTP_400_BAD_REQUEST
 
+    logger.log_complete(__get_timelines_all_users, timeline_schema)
     return result
 
 
@@ -608,17 +645,11 @@ def __get_timeline_activity(timeline_schema: schemas.CreateTimeline):
     timeline_schema.activity = str(modified_task_summary_activity)
 
 
-async def get_activity_in_the_range_for_specified_user(
-    timeline_schema: schemas.GetTimelinesForSpecifiedUser,
-):
-    pass
-
-
 async def get_all_timeline_in_the_range_for_specified_user(
     timeline_schema: schemas.GetTimelinesForSpecifiedUser,
 ):
-    logger.info(
-        f"Start __get_all_timeline_in_the_range_for_specified_user TimeIntervals - {timeline_schema}"
+    logger.log_start(
+        get_all_timeline_in_the_range_for_specified_user, timeline_schema
     )
     try:
 
@@ -627,10 +658,16 @@ async def get_all_timeline_in_the_range_for_specified_user(
         )
 
     except Exception as err:
-        logger.error(
-            f"__get_all_timeline_in_the_range_for_specified_user raise exception - {err}"
+        logger.log_exception(
+            get_all_timeline_in_the_range_for_specified_user,
+            timeline_schema,
+            err,
         )
         return status.HTTP_400_BAD_REQUEST
+
+    logger.log_complete(
+        get_all_timeline_in_the_range_for_specified_user, timeline_schema
+    )
 
     return result
 
@@ -672,12 +709,8 @@ def sort(array):
                 equal.append(x)
             elif x[1] > pivot[1]:
                 greater.append(x)
-        # Don't forget to return something!
-        return (
-            sort(less) + equal + sort(greater)
-        )  # Just use the + operator to join lists
-    # Note that you want equal ^^^^^ not pivot
-    else:  # You need to handle the part at the end of the recursion - when you only have one element in your array, just return the array.
+        return sort(less) + equal + sort(greater)
+    else:
         return array
 
 

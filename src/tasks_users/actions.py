@@ -18,19 +18,28 @@ timeout_execute_command = 1000
 
 
 async def create_new_task(task_schemas: schemas.CreateTask):
+    logger.log_start(create_new_task, task_schemas)
+    
     try:
         result = await asyncio.wait_for(
             __create_new_task(task_schemas), timeout_execute_command
         )
 
     except asyncio.TimeoutError as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(
+            create_new_task, task_schemas, err
+        )
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(
+            create_new_task, task_schemas, err
+        )
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
 
+    logger.log_complete(
+        create_new_task, task_schemas
+    )
     return result
 
 
@@ -77,19 +86,28 @@ async def patch_task(task_schemas: schemas.PatchTask):
 
 
 async def delete_task(task_schemas: schemas.DeleteTask):
+    logger.log_start(delete_task, task_schemas)
+    
     try:
         result = await asyncio.wait_for(
             __delete_task(task_schemas), timeout_execute_command
         )
 
     except asyncio.TimeoutError as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(
+            delete_task, task_schemas, err
+        )
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.error(f"create_user raise exception - {err}")
+        logger.log_exception(
+            delete_task, task_schemas, err
+        )
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
 
+    logger.log_complete(
+        delete_task, task_schemas
+    )
     return result
 
 
@@ -149,8 +167,18 @@ async def get_task_via_id(session: AsyncSession, task_id: int):
 
 
 async def get_all_tasks():
-    session = db_helper.get_scoped_session()
-    request = select(models.Tasks).order_by(models.Tasks.id)
-    result = await session.execute(request)
-    timelines = result.scalars().all()  # (id, prod)
+    logger.log_start(get_all_tasks, dict())
+
+    try:
+        session = db_helper.get_scoped_session()
+        request = select(models.Tasks).order_by(models.Tasks.id)
+        result = await session.execute(request)
+        timelines = result.scalars().all()  # (id, prod)
+    except Exception as err:
+        logger.log_exception(
+            get_all_tasks, dict(), err
+        )
+        return status.HTTP_400_BAD_REQUEST
+
+    logger.log_complete(get_all_tasks, dict())
     return timelines

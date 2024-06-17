@@ -22,11 +22,6 @@ async def create_new_task(task: schemas.CreateTask):
     return await actions.create_new_task(task)
 
 
-@router.patch("/stop_timeline")
-async def stop_task(task: schemas.DeleteTask):
-    return await actions.stop_timeline(task)
-
-
 @router.delete("/delete_task")
 async def remove_task(task: schemas.DeleteTask):
     return await actions.delete_task(task)
