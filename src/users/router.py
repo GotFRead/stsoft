@@ -28,6 +28,8 @@ async def patch_user(user_info: schemas.PatchUser):
     return await actions.patch_user(user_info)
 
 
-@router.delete("/")
-async def delete_user(user_info: schemas.DeleteUser):
+@router.delete("/{user_id}")
+async def delete_user(user_id: int):
+    user_info = schemas.DeleteUser
+    user_info.id = user_id
     return await actions.delete_user(user_info)

@@ -65,7 +65,7 @@ async def patch_user(user_schemas: schemas.CreateUser):
     return result
 
 
-async def delete_user(user_schemas: schemas.CreateUser):
+async def delete_user(user_schemas: schemas.DeleteUser):
     try:
         result = await asyncio.wait_for(
             __delete_user(user_schemas), timeout_execute_command
