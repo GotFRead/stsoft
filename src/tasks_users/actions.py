@@ -133,10 +133,10 @@ async def __delete_task(task_schemas: schemas.DeleteTask):
         session = db_helper.get_scoped_session()
 
         logger.info(f"Start remove task - {task_schemas}")
-        removed_user: models.Users = await get_task_via_id(
+        removed_task: models.Tasks = await get_task_via_id(
             session=session, task_id=task_schemas.id
         )
-        await session.delete(removed_user)
+        await session.delete(removed_task)
 
         await session.commit()
 
