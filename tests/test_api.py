@@ -5,7 +5,6 @@ async def test_create_first_user(async_client: AsyncClient):
     response = await async_client.post(
         "/users/",
         json={
-            "id": 1,
             "fullname": "I am FIRST TEST USER",
             "user_id": "FIRST TEST USER",
         },
@@ -18,7 +17,6 @@ async def test_create_second_user(async_client: AsyncClient):
     response = await async_client.post(
         "/users/",
         json={
-            "id": 2,
             "fullname": "I am SECOND TEST USER",
             "user_id": "SECOND TEST USER",
         },
@@ -31,10 +29,9 @@ async def test_create_first_task(async_client: AsyncClient):
     response = await async_client.post(
         "/tasks/create_task",
         json={
-            "id": 1,
             "task_id": "TEST first USER TASK",
             "description": "This is test user task",
-            "owner": 1,
+            "owner_id": 1,
             "activity": "00:00",
         },
     )
@@ -46,10 +43,9 @@ async def test_create_second_task(async_client: AsyncClient):
     response = await async_client.post(
         "/tasks/create_task",
         json={
-            "id": 2,
             "task_id": "TEST second USER TASK",
             "description": "This is test second user task",
-            "owner": 2,
+            "owner_id": 2,
             "activity": "00:00",
         },
     )
@@ -65,18 +61,18 @@ async def test_get_all_tasks(async_client: AsyncClient):
     assert len(deserialized_response) != 0
     assert deserialized_response == [
         {
-            "id": 1,
+            'activity': '00:00',
             "task_id": "TEST first USER TASK",
             "description": "This is test user task",
-            "owner": 1,
-            "activity": "00:00",
+            "owner_id": 1,
+            'id': 1,
         },
         {
-            "id": 2,
+            'activity': '00:00',
             "task_id": "TEST second USER TASK",
             "description": "This is test second user task",
-            "owner": 2,
-            "activity": "00:00",
+            "owner_id": 2,
+            'id': 2,
         },
     ]
 
@@ -85,13 +81,11 @@ async def test_create_first_timeline(async_client: AsyncClient):
     response = await async_client.post(
         "/timelines/create_new_timeline",
         json={
-            "id": 1,
             "task_id": 1,
             "owner_id": 1,
             "description": "THIS IS TEST TIMELINES",
             "time_start": "2024-06-17 12:44",
             "time_end": "2024-06-17 17:44",
-            "activity": "00:00",
         },
     )
 
@@ -102,13 +96,11 @@ async def test_create_second_timeline(async_client: AsyncClient):
     response = await async_client.post(
         "/timelines/create_new_timeline",
         json={
-            "id": 2,
             "task_id": 2,
             "owner_id": 2,
             "description": "THIS IS TEST TIMELINES FOR SECOND USER",
             "time_start": "2024-06-17 13:21",
             "time_end": "2024-06-17 16:19",
-            "activity": "00:00",
         },
     )
 
@@ -155,14 +147,14 @@ async def test_get_all_tasks_after_add_timeline(async_client: AsyncClient):
             "id": 1,
             "task_id": "TEST first USER TASK",
             "description": "This is test user task",
-            "owner": 1,
+            "owner_id": 1,
             "activity": "05:00",
         },
         {
             "id": 2,
             "task_id": "TEST second USER TASK",
             "description": "This is test second user task",
-            "owner": 2,
+            "owner_id": 2,
             "activity": "02:58",
         },
     ]
@@ -279,7 +271,6 @@ async def test_get_downtime_and_timeline_for_specified_user(
     assert deserialized_response == {
         "2024-06-17": [
             {
-                "id": "This is downtime timeline, 'id' - NOT EXIST",
                 "task_id": "EXECUTABLE TASK NOT FOUND!",
                 "owner_id": 1,
                 "description": "DOWNTIME",
@@ -297,7 +288,6 @@ async def test_get_downtime_and_timeline_for_specified_user(
                 "id": 1,
             },
             {
-                "id": "This is downtime timeline, 'id' - NOT EXIST",
                 "task_id": "EXECUTABLE TASK NOT FOUND!",
                 "owner_id": 1,
                 "description": "DOWNTIME",
