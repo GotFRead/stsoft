@@ -277,51 +277,85 @@ def add_downtimes_to_date_hashmap(
                 date_hashmap[date][timelines_index]
             )
             if timelines_index == 0:
-                if (
-                    timeline.time_start.strftime(DELTA_TIME_FORMAT)
-                    == timeline_schema.time_start_work
-                ):
-                    result.append(timeline)
-                    continue
-
-                downtime_timeline = compile_downtime_for_start_time_interval(
-                    date, timeline_schema, timeline
+                compile_start_downtime_list(
+                    timeline, timeline_schema, date, result
                 )
-
-                result.append(convert_schemas_class_to_dict(downtime_timeline))
-                result.append(timeline)
             else:
                 previous_timeline: models.TimeIntervals = date_hashmap[date][
                     timelines_index - 1
                 ]
-                if previous_timeline.time_end.strftime(
-                    DELTA_TIME_FORMAT
-                ) == timeline.time_start.strftime(DELTA_TIME_FORMAT):
-                    continue
-
-                downtime_timeline = compile_downtime_for_middle_time_interval(
-                    date, timeline, previous_timeline, timeline_schema
+                compile_middle_downtime_list(
+                    timeline, previous_timeline, timeline_schema, date, result
                 )
-
-                result.append(convert_schemas_class_to_dict(downtime_timeline))
-                result.append(timeline)
 
             if timelines_index == len(date_hashmap[date]) - 1:
-                if (
-                    timeline.time_end.strftime(DELTA_TIME_FORMAT)
-                    == timeline_schema.time_end_work
-                ):
-                    continue
-
-                downtime_timeline = compile_downtime_for_end_time_interval(
-                    date, timeline, timeline_schema
+                compile_end_downtime_list(
+                    timeline, timeline_schema, date, result
                 )
-
-                result.append(convert_schemas_class_to_dict(downtime_timeline))
 
         date_hashmap[date] = result
 
     return date_hashmap
+
+
+def compile_start_downtime_list(
+    timeline: models.TimeIntervals,
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+    exodus_date: str,
+    downtime_list: list,
+):
+    if (
+        timeline.time_start.strftime(DELTA_TIME_FORMAT)
+        == timeline_schema.time_start_work
+    ):
+        downtime_list.append(timeline)
+        return
+
+    downtime_timeline = compile_downtime_for_start_time_interval(
+        exodus_date, timeline_schema, timeline
+    )
+
+    downtime_list.append(convert_schemas_class_to_dict(downtime_timeline))
+    downtime_list.append(timeline)
+
+
+def compile_middle_downtime_list(
+    timeline: models.TimeIntervals,
+    previous_timeline: models.TimeIntervals,
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+    exodus_date: str,
+    downtime_list: list,
+):
+    if previous_timeline.time_end.strftime(
+        DELTA_TIME_FORMAT
+    ) == timeline.time_start.strftime(DELTA_TIME_FORMAT):
+        return
+
+    downtime_timeline = compile_downtime_for_middle_time_interval(
+        exodus_date, timeline, previous_timeline, timeline_schema
+    )
+
+    downtime_list.append(convert_schemas_class_to_dict(downtime_timeline))
+    downtime_list.append(timeline)
+
+
+def compile_end_downtime_list(
+    timeline: models.TimeIntervals,
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+    exodus_date: str,
+    downtime_list: list,
+):
+    if (
+        timeline.time_end.strftime(DELTA_TIME_FORMAT)
+        == timeline_schema.time_end_work
+    ):
+        return
+
+    downtime_timeline = compile_downtime_for_end_time_interval(
+        exodus_date, timeline, timeline_schema
+    )
+
+    downtime_list.append(convert_schemas_class_to_dict(downtime_timeline))
 
 
 def compile_downtime_for_start_time_interval(
