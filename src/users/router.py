@@ -12,10 +12,9 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 # __handlers__
 
-# TODO
-# @router.get("/users")
-# def login():
-#     return get_static_file('pages', 'login_page.html')
+@router.get("/")
+async def get_all_users():
+    return await actions.get_all_users()
 
 
 @router.post("/")

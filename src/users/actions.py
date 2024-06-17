@@ -7,11 +7,28 @@ from fastapi import status
 from models.db_helper import db_helper
 from helpers.logger import create_logger
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 
 logger = create_logger("user_actions.log")
 
 timeout_execute_command = 1000
+
+
+async def get_all_users():
+    logger.log_start(get_all_users, dict())
+
+    try:
+        session = db_helper.get_scoped_session()
+        request = select(models.Users).order_by(models.Users.id)
+        result = await session.execute(request)
+        timelines = result.scalars().all()  # (id, prod)
+    except Exception as err:
+        logger.log_exception(get_all_users, dict(), err)
+        return status.HTTP_400_BAD_REQUEST
+
+    logger.log_complete(get_all_users, dict())
+    return timelines
 
 
 async def create_user(user_schemas: schemas.CreateUser):
