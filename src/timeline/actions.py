@@ -310,7 +310,7 @@ def add_downtimes_to_date_hashmap(
         if len(date_hashmap[date]) == 0:
             date_hashmap[date] = [
                 convert_schemas_class_to_dict(
-                    __compile_downtime_day(timeline_schema)
+                    __compile_downtime_day(timeline_schema, date)
                 )
             ]
             continue
@@ -351,7 +351,7 @@ def compile_start_downtime_list(
 ):
     if (
         timeline.time_start.strftime(DELTA_TIME_FORMAT)
-        == timeline_schema.time_start_work
+        <= timeline_schema.time_start_work
     ):
         downtime_list.append(timeline)
         return
@@ -392,7 +392,7 @@ def compile_end_downtime_list(
 ):
     if (
         timeline.time_end.strftime(DELTA_TIME_FORMAT)
-        == timeline_schema.time_end_work
+        >= timeline_schema.time_end_work
     ):
         return
 
@@ -486,19 +486,29 @@ def get_downtime_timeline(
 
 def __compile_downtime_day(
     timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+    date: str
 ):
-    return __create_downtime_via_timeline_schema(timeline_schema)
+    return __create_downtime_via_timeline_schema(timeline_schema, date)
 
 
 def __create_downtime_via_timeline_schema(
     timeline_schema: schemas.GetDowntimeForSpecifiedUser,
+    date: str
 ):
     return __create_temp_timeline(
-        datetime.now().strptime(
-            timeline_schema.time_start_work, DELTA_TIME_FORMAT
+        datetime(
+            year=int(date.split("-")[0]),
+            month=int(date.split("-")[1]),
+            day=int(date.split("-")[2]),
+            hour=int(timeline_schema.time_start_work.split(':')[0]),
+            minute=int(timeline_schema.time_start_work.split(':')[1]),
         ),
-        datetime.now().strptime(
-            timeline_schema.time_end_work, DELTA_TIME_FORMAT
+        datetime(
+            year=int(date.split("-")[0]),
+            month=int(date.split("-")[1]),
+            day=int(date.split("-")[2]),
+            hour=int(timeline_schema.time_end_work.split(':')[0]),
+            minute=int(timeline_schema.time_end_work.split(':')[1]),
         ),
         timeline_schema.user_id,
     )
