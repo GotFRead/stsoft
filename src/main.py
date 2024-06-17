@@ -10,7 +10,7 @@ from alembic import command
 from routes import router
 from users.router import router as usr_router
 from tasks_users.router import router as tasks_users_router
-# from time_interval import router as time_interval_router
+from timeline.router import router as time_interval_router
 
 import uvicorn
 import asyncio
@@ -41,7 +41,7 @@ app = FastAPI(lifespan=lifespan, debug=True)
 app.include_router(router)
 app.include_router(usr_router)
 app.include_router(tasks_users_router)
-# app.include_router(time_interval_router)
+app.include_router(time_interval_router)
 
 
 def run_server():
