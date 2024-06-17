@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
 
+ACTIVITY_TIME_FORMAT = "00:00"
+
 logger = create_logger("timeline_actions.log")
 
 timeout_execute_command = 1000
@@ -19,27 +21,21 @@ timeout_execute_command = 1000
 
 async def create_new_task(task_schemas: schemas.CreateTask):
     logger.log_start(create_new_task, task_schemas)
-    
+
     try:
         result = await asyncio.wait_for(
             __create_new_task(task_schemas), timeout_execute_command
         )
 
     except asyncio.TimeoutError as err:
-        logger.log_exception(
-            create_new_task, task_schemas, err
-        )
+        logger.log_exception(create_new_task, task_schemas, err)
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.log_exception(
-            create_new_task, task_schemas, err
-        )
+        logger.log_exception(create_new_task, task_schemas, err)
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    logger.log_complete(
-        create_new_task, task_schemas
-    )
+    logger.log_complete(create_new_task, task_schemas)
     return result
 
 
@@ -48,15 +44,23 @@ async def __create_new_task(task_schemas: schemas.CreateTask):
     try:
         session = db_helper.get_scoped_session()
 
-        task_schemas.activity = datetime.strptime(
-            task_schemas.activity,
+        schemas_mapping = task_schemas.dict()
+
+        if not hasattr(task_schemas, "activity"):
+            schemas_mapping["activity"] = (
+                f"{datetime.today().strftime(ACTIVITY_TIME_FORMAT)}"
+            )
+
+        schemas_mapping["activity"] = datetime.strptime(
+            schemas_mapping["activity"],
             schemas.ACTIVITY_TIME_FORMAT,
         )
-        task_schemas.activity = dependencies.SummaryActivity(
-            task_schemas.activity.hour, task_schemas.activity.minute
+        schemas_mapping["activity"] = dependencies.SummaryActivity(
+            schemas_mapping["activity"].hour, 
+            schemas_mapping["activity"].minute
         ).__str__()
 
-        new_task = models.Tasks(**task_schemas.dict())
+        new_task = models.Tasks(**schemas_mapping)
 
         session.add(new_task)
 
@@ -87,27 +91,21 @@ async def patch_task(task_schemas: schemas.PatchTask):
 
 async def delete_task(task_schemas: schemas.DeleteTask):
     logger.log_start(delete_task, task_schemas)
-    
+
     try:
         result = await asyncio.wait_for(
             __delete_task(task_schemas), timeout_execute_command
         )
 
     except asyncio.TimeoutError as err:
-        logger.log_exception(
-            delete_task, task_schemas, err
-        )
+        logger.log_exception(delete_task, task_schemas, err)
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.log_exception(
-            delete_task, task_schemas, err
-        )
+        logger.log_exception(delete_task, task_schemas, err)
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    logger.log_complete(
-        delete_task, task_schemas
-    )
+    logger.log_complete(delete_task, task_schemas)
     return result
 
 
@@ -175,9 +173,7 @@ async def get_all_tasks():
         result = await session.execute(request)
         timelines = result.scalars().all()  # (id, prod)
     except Exception as err:
-        logger.log_exception(
-            get_all_tasks, dict(), err
-        )
+        logger.log_exception(get_all_tasks, dict(), err)
         return status.HTTP_400_BAD_REQUEST
 
     logger.log_complete(get_all_tasks, dict())

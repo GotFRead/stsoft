@@ -7,7 +7,6 @@ from pydantic import BaseModel
 
 
 class CreateUser(BaseModel):
-    id: int = -1
     fullname: Annotated[str, MinLen(2), MaxLen(256)]
     user_id: Annotated[str, MinLen(2), MaxLen(256)]
 

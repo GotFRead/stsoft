@@ -14,8 +14,7 @@ DEFAULT_START_OF_WORKING_HOURS = "09:00"
 DEFAULT_END_OF_WORKING_HOURS = "18:00"
 
 
-class CreateTimeline(BaseModel):
-    id: int = -1
+class InputTimeline(BaseModel):
     task_id: int
     owner_id: int
     description: Annotated[str, MaxLen(256)] = "No comments"
@@ -25,6 +24,9 @@ class CreateTimeline(BaseModel):
     time_end: str | datetime = (
         f"{datetime.today().strftime(SHORT_TIME_FORMAT)} --:--"
     )
+
+
+class CreateTimeline(InputTimeline):
     activity: str = f"{datetime.today().strftime(ACTIVITY_TIME_FORMAT)}"
 
 
@@ -67,9 +69,7 @@ class GetDowntimeForSpecifiedUser(GetActivityForSpecifiedUser):
     time_start: str | datetime = (
         f"{datetime.today().strftime(SHORT_TIME_FORMAT)}"
     )
-    time_end: str | datetime = (
-        f"{datetime.today().strftime(SHORT_TIME_FORMAT)}"
-    )
+    time_end: str | datetime = f"{datetime.today().strftime(SHORT_TIME_FORMAT)}"
     time_start_work: str | datetime = (
         f"{datetime.today().strftime(DEFAULT_START_OF_WORKING_HOURS)}"
     )

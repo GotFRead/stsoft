@@ -9,7 +9,7 @@ class Tasks(Base):
     __tablename__ = "tasks"
     task_id: Mapped[str]
     description: Mapped[str]
-    owner: Mapped[int] = mapped_column(
+    owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE")
     )
     activity: Mapped[str]

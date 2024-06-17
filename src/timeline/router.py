@@ -17,7 +17,7 @@ async def get_all_timelines():
 
 
 @router.post("/create_new_timeline")
-async def create_new_timelines(timeline_schema: schemas.CreateTimeline):
+async def create_new_timelines(timeline_schema: schemas.InputTimeline):
     return await actions.create_new_timeline(timeline_schema)
 
 

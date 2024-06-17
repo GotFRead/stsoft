@@ -19,6 +19,7 @@ logger = create_logger("timeline_actions.log")
 
 timeout_execute_command = 1000
 
+ACTIVITY_TIME_FORMAT = "00:00"
 DEFAULT_TIME = "--:--"
 TIME_FORMAT = "%Y-%m-%d %H:%M"
 NOT_COMPILE_TIME_FORMAT = "%Y-%m-%d 00:00"
@@ -45,7 +46,7 @@ async def get_all_timelines():
     return result
 
 
-async def create_new_timeline(timeline_schema: schemas.CreateTimeline):
+async def create_new_timeline(timeline_schema: schemas.InputTimeline):
     logger.log_start(create_new_timeline, timeline_schema)
 
     try:
@@ -618,43 +619,70 @@ async def __stop_timeline(timeline_schema: schemas.StopTimeline):
     return status.HTTP_200_OK
 
 
-async def __create_timeline(timeline_schema: schemas.CreateTimeline):
-    logger.info(f"Start create TimeIntervals - {timeline_schema}")
+async def __create_timeline(timeline_schema: schemas.InputTimeline):
 
-    timeline_schema.time_start = prepare_timeline_time(
-        timeline_schema.time_start
-        if DEFAULT_TIME not in timeline_schema.time_start
+    prepared_timeline_schema = prepare_timeline_schemas(timeline_schema)
+
+    prepared_timeline_schema.time_start = prepare_timeline_time(
+        prepared_timeline_schema.time_start
+        if DEFAULT_TIME not in prepared_timeline_schema.time_start
         else datetime.now().strftime(TIME_FORMAT)
     )
 
-    timeline_schema.time_end = (
-        prepare_timeline_time(timeline_schema.time_end)
-        if DEFAULT_TIME not in timeline_schema.time_end
+    prepared_timeline_schema.time_end = (
+        prepare_timeline_time(prepared_timeline_schema.time_end)
+        if DEFAULT_TIME not in prepared_timeline_schema.time_end
         else prepare_timeline_time(
             datetime.now().strftime(NOT_COMPILE_TIME_FORMAT)
         )
     )
-    if timeline_schema.time_end.strftime(
+    if prepared_timeline_schema.time_end.strftime(
         TIME_FORMAT
     ) != datetime.now().strftime(NOT_COMPILE_TIME_FORMAT):
-        __get_timeline_activity(timeline_schema)
+        __get_timeline_activity(prepared_timeline_schema)
+
+    schemas_mapping = prepare_schemas_mapping(prepared_timeline_schema)
 
     try:
         session = db_helper.get_scoped_session()
 
-        new_timeline = models.TimeIntervals(**timeline_schema.dict())
+        new_timeline = models.TimeIntervals(**schemas_mapping)
 
         session.add(new_timeline)
 
-        await __actualization_task(session, timeline_schema)
+        await __actualization_task(session, prepared_timeline_schema)
 
         await session.commit()
 
     except Exception as err:
-        logger.error(f"__create_timeline raise exception - {err}")
+        logger.log_exception(
+            __create_timeline,
+            timeline_schema,
+            err,
+        )
         return status.HTTP_400_BAD_REQUEST
 
     return status.HTTP_200_OK
+
+
+def prepare_schemas_mapping(timeline_schema: schemas.PatchTimeline):
+    result = convert_schemas_class_to_dict(timeline_schema)
+    del result["id"]
+    return result
+
+
+def prepare_timeline_schemas(timeline_schema: schemas.CreateTimeline):
+    prepared_timeline_schema = schemas.PatchTimeline
+    prepared_timeline_schema.id = "terminator"
+    prepared_timeline_schema.task_id = timeline_schema.task_id
+    prepared_timeline_schema.owner_id = timeline_schema.owner_id
+    prepared_timeline_schema.description = timeline_schema.description
+    prepared_timeline_schema.time_start = timeline_schema.time_start
+    prepared_timeline_schema.time_end = timeline_schema.time_end
+    prepared_timeline_schema.activity = (
+        f"{datetime.today().strftime(ACTIVITY_TIME_FORMAT)}"
+    )
+    return prepared_timeline_schema
 
 
 def __get_timeline_activity(timeline_schema: schemas.CreateTimeline):
@@ -827,6 +855,10 @@ def __compile_activity(
             modified_activity_object
         )
     elif modified_activity_object == schemas.CreateTimeline:
+        modified_summary_activity = get_summary_activity_from_timeline_schema(
+            modified_activity_object
+        )
+    elif modified_activity_object == schemas.PatchTimeline:
         modified_summary_activity = get_summary_activity_from_timeline_schema(
             modified_activity_object
         )
