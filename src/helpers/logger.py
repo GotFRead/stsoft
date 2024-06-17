@@ -70,7 +70,7 @@ def add_to_logger_method_complete_successful(logger):
 
 
 def add_to_logger_method_caught_exception(logger):
-    def log_exception(func: Callable, err: Exception, params):
+    def log_exception(func: Callable, params, err: Exception):
         return logger.info(
             f"Function - '{func.__name__}' with params {params} raise exception - {err} ! Time - {datetime.now()}"
         )
