@@ -485,30 +485,28 @@ def get_downtime_timeline(
 
 
 def __compile_downtime_day(
-    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
-    date: str
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser, date: str
 ):
     return __create_downtime_via_timeline_schema(timeline_schema, date)
 
 
 def __create_downtime_via_timeline_schema(
-    timeline_schema: schemas.GetDowntimeForSpecifiedUser,
-    date: str
+    timeline_schema: schemas.GetDowntimeForSpecifiedUser, date: str
 ):
     return __create_temp_timeline(
         datetime(
             year=int(date.split("-")[0]),
             month=int(date.split("-")[1]),
             day=int(date.split("-")[2]),
-            hour=int(timeline_schema.time_start_work.split(':')[0]),
-            minute=int(timeline_schema.time_start_work.split(':')[1]),
+            hour=int(timeline_schema.time_start_work.split(":")[0]),
+            minute=int(timeline_schema.time_start_work.split(":")[1]),
         ),
         datetime(
             year=int(date.split("-")[0]),
             month=int(date.split("-")[1]),
             day=int(date.split("-")[2]),
-            hour=int(timeline_schema.time_end_work.split(':')[0]),
-            minute=int(timeline_schema.time_end_work.split(':')[1]),
+            hour=int(timeline_schema.time_end_work.split(":")[0]),
+            minute=int(timeline_schema.time_end_work.split(":")[1]),
         ),
         timeline_schema.user_id,
     )
@@ -690,6 +688,20 @@ async def __create_timeline(timeline_schema: schemas.InputTimeline):
             datetime.now().strftime(NOT_COMPILE_TIME_FORMAT)
         )
     )
+    if prepared_timeline_schema.time_end < prepared_timeline_schema.time_start:
+        raise Exception(
+            f"End timeline - {prepared_timeline_schema.time_end } > {prepared_timeline_schema.time_start}"
+        )
+
+    checked_delta = (
+        prepared_timeline_schema.time_end - prepared_timeline_schema.time_start
+    )
+
+    if checked_delta.days != 0:
+        raise Exception(
+            f"Detect incorrect delta between {prepared_timeline_schema.time_end } and {prepared_timeline_schema.time_start} delta - {checked_delta}"
+        )
+
     if prepared_timeline_schema.time_end.strftime(
         TIME_FORMAT
     ) != datetime.now().strftime(NOT_COMPILE_TIME_FORMAT):
