@@ -8,7 +8,7 @@ from fastapi import APIRouter
 
 # __router__
 
-router = APIRouter(tags=["time_interval"], prefix="/timelines")
+router = APIRouter(tags=["timelines"], prefix="/timelines")
 
 
 @router.get("/")
@@ -24,6 +24,13 @@ async def create_new_timelines(timeline_schema: schemas.InputTimeline):
 @router.post("/stop_timeline")
 async def stop_timeline(timeline_schema: schemas.StopTimeline):
     return await actions.stop_timeline(timeline_schema)
+
+
+@router.delete("/delete_timeline/{timeline_id}")
+async def remove_task(timeline_id: int):
+    timeline_info = schemas.DeleteTimeline
+    timeline_info.id = timeline_id
+    return await actions.delete_timeline(timeline_info)
 
 
 @router.post("/get_timelines_all_users")

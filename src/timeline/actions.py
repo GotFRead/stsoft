@@ -46,6 +46,50 @@ async def get_all_timelines():
     return result
 
 
+async def delete_timeline(timeline_schema: schemas.DeleteTimeline):
+    logger.log_start(delete_timeline, timeline_schema)
+
+    try:
+        result = await asyncio.wait_for(
+            __delete_timeline(timeline_schema), timeout_execute_command
+        )
+
+    except asyncio.TimeoutError as err:
+        logger.log_exception(create_new_timeline, dict(), err)
+        result = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    except Exception as err:
+        logger.log_exception(create_new_timeline, dict(), err)
+        result = status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    logger.log_complete(create_new_timeline, dict())
+
+    return result
+
+
+async def __delete_timeline(timeline_schemas: schemas.DeleteTimeline):
+    try:
+        session = db_helper.get_scoped_session()
+
+        removed_timeline: models.TimeIntervals = await get_timeline_via_id(
+            session=session, timeline_id=timeline_schemas.id
+        )
+        await session.delete(removed_timeline)
+
+        await __actualization_task(session, removed_timeline, False)
+
+        await session.commit()
+
+    except Exception as err:
+        logger.log_exception(__delete_timeline, timeline_schemas, err)
+        return status.HTTP_400_BAD_REQUEST
+    return status.HTTP_200_OK
+
+
+async def get_timeline_via_id(session: AsyncSession, task_id: int):
+    return await session.get(models.TimeIntervals, task_id)
+
+
 async def create_new_timeline(timeline_schema: schemas.InputTimeline):
     logger.log_start(create_new_timeline, timeline_schema)
 
@@ -827,7 +871,9 @@ def get_timelines_for_specified_user(
 
 
 async def __actualization_task(
-    session: AsyncSession, timeline_schema: schemas.CreateTimeline
+    session: AsyncSession,
+    timeline_schema: schemas.CreateTimeline,
+    add_timeline: bool = True,
 ):
 
     if timeline_schema.time_end.strftime(
@@ -839,11 +885,13 @@ async def __actualization_task(
         session, timeline_schema.task_id
     )
 
-    __compile_activity(timeline_schema, modified_task)
+    __compile_activity(timeline_schema, modified_task, add_timeline)
 
 
 def __compile_activity(
-    timeline_schema: schemas.CreateTimeline, modified_activity_object: object
+    timeline_schema: schemas.CreateTimeline,
+    modified_activity_object: object,
+    add_timeline: bool = True,
 ):
 
     delta = timeline_schema.time_end - datetime.strptime(
@@ -867,12 +915,20 @@ def __compile_activity(
 
     hours_delta, minute_delta = get_hours_and_minutes_from_delta(delta)
 
-    modified_summary_activity.hours = (
-        modified_summary_activity.hours + hours_delta
-    )
-    modified_summary_activity.minutes = (
-        modified_summary_activity.minutes + minute_delta
-    )
+    if add_timeline:
+        modified_summary_activity.hours = (
+            modified_summary_activity.hours + hours_delta
+        )
+        modified_summary_activity.minutes = (
+            modified_summary_activity.minutes + minute_delta
+        )
+    else:
+        modified_summary_activity.hours = (
+            modified_summary_activity.hours - hours_delta
+        )
+        modified_summary_activity.minutes = (
+            modified_summary_activity.minutes - minute_delta
+        )
 
     modified_activity_object.activity = str(modified_summary_activity)
 
