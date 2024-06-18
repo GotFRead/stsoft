@@ -40,6 +40,7 @@ async def create_new_task(task_schemas: schemas.CreateTask):
 
 
 async def __create_new_task(task_schemas: schemas.CreateTask):
+    """ Создание новой задачи для конкретного пользователя """
     logger.info(f"Start create task - {task_schemas}")
     try:
         session = db_helper.get_scoped_session()
@@ -51,6 +52,7 @@ async def __create_new_task(task_schemas: schemas.CreateTask):
                 f"{datetime.today().strftime(ACTIVITY_TIME_FORMAT)}"
             )
 
+        # формирование сводной активности 
         schemas_mapping["activity"] = datetime.strptime(
             schemas_mapping["activity"],
             schemas.ACTIVITY_TIME_FORMAT,
@@ -73,6 +75,7 @@ async def __create_new_task(task_schemas: schemas.CreateTask):
 
 
 async def patch_task(task_schemas: schemas.PatchTask):
+    """ Изменение задачи конкретного пользователя """
     try:
         result = await asyncio.wait_for(
             __patch_task(task_schemas), timeout_execute_command
@@ -90,6 +93,7 @@ async def patch_task(task_schemas: schemas.PatchTask):
 
 
 async def delete_task(task_schemas: schemas.DeleteTask):
+    """ Удаление задачи конкретного пользователя """
     logger.log_start(delete_task, task_schemas)
 
     try:

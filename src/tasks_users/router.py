@@ -19,11 +19,13 @@ async def get_all_tasks():
 
 @router.post("/create_task")
 async def create_new_task(task: schemas.CreateTask):
+    """ Создание новой задачи для конкретного пользователя """
     return await actions.create_new_task(task)
 
 
 @router.delete("/delete_task/{task_id}")
 async def remove_task(task_id: int):
+    """ Это решение пункта номер 9 """
     task_info = schemas.DeleteTask
     task_info.id = task_id
     return await actions.delete_task(task_info)

@@ -16,6 +16,7 @@ timeout_execute_command = 1000
 
 
 async def get_all_users():
+    """ Получнение всех пользователей"""
     logger.log_start(get_all_users, dict())
 
     try:
@@ -32,6 +33,10 @@ async def get_all_users():
 
 
 async def create_user(user_schemas: schemas.CreateUser):
+    """ Это решение пункта номер 1 \n
+    
+        Создание пользователя
+    """
     try:
         result = await asyncio.wait_for(
             __create_user(user_schemas), timeout_execute_command
@@ -66,6 +71,10 @@ async def __create_user(user_schemas: schemas.CreateUser):
 
 
 async def patch_user(user_schemas: schemas.CreateUser):
+    """ Это решение пункта номер 2 \n
+    
+        Изменение пользователя
+    """
     try:
         result = await asyncio.wait_for(
             __patch_user(user_schemas), timeout_execute_command
@@ -83,6 +92,8 @@ async def patch_user(user_schemas: schemas.CreateUser):
 
 
 async def delete_user(user_schemas: schemas.DeleteUser):
+    """ Удаление пользователя
+    """
     try:
         result = await asyncio.wait_for(
             __delete_user(user_schemas), timeout_execute_command
@@ -137,6 +148,7 @@ async def __delete_user(user_schemas: schemas.DeleteUser):
 async def __update_user_info_partial(
     session: AsyncSession, user_schemas: schemas.CreateUser
 ):
+    """ Частичное изменение пользователя """
 
     changed_user: models.Users = await __get_user_via_id(
         session=session, user_id=user_schemas.id
@@ -151,4 +163,5 @@ async def __update_user_info_partial(
 
 
 async def __get_user_via_id(session: AsyncSession, user_id: int):
+    """ Получение пользователя по id """
     return await session.get(models.Users, user_id)
