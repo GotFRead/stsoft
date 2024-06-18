@@ -57,20 +57,20 @@ async def delete_timeline(timeline_schema: schemas.DeleteTimeline):
         )
 
     except asyncio.TimeoutError as err:
-        logger.log_exception(create_new_timeline, dict(), err)
+        logger.log_exception(delete_timeline, dict(), err)
         result = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as err:
-        logger.log_exception(create_new_timeline, dict(), err)
+        logger.log_exception(delete_timeline, dict(), err)
         result = status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    logger.log_complete(create_new_timeline, dict())
+    logger.log_complete(delete_timeline, dict())
 
     return result
 
 
 async def __delete_timeline(timeline_schemas: schemas.DeleteTimeline):
-    """ Удаление таймлайна """
+    """Удаление таймлайна"""
     try:
         session = db_helper.get_scoped_session()
 
@@ -282,7 +282,7 @@ def sort_timelines(date_hashmap: dict):
 
 
 def add_timelines_to_hashmap(timelines: schemas.CreateTimeline, hashmap: dict):
-    """ Добавление  таймлайна по дате в словарь"""
+    """Добавление  таймлайна по дате в словарь"""
     for timeline in timelines:
         timeline_start_date = timeline.time_start.strftime(DATE_FORMAT)
 
@@ -306,8 +306,8 @@ def convert_models_mapping_to_dict(models_mapping: models.TimeIntervals):
 
 
 def get_timeline_interval(time_start: datetime, time_end: datetime):
-    """ Получение форматированного временного интервала """
-    # ? После изменения схемы - не используется. Оставил до востребования 
+    """Получение форматированного временного интервала"""
+    # ? После изменения схемы - не используется. Оставил до востребования
     timeline_start_time = time_start.strftime(DELTA_TIME_FORMAT)
     timeline_end_time = time_end.strftime(DELTA_TIME_FORMAT)
 
@@ -315,7 +315,7 @@ def get_timeline_interval(time_start: datetime, time_end: datetime):
 
 
 def compile_date_hashmap(timeline_schema):
-    """ Формирование словаря с датами по схеме """
+    """Формирование словаря с датами по схеме"""
     date_hashmap = dict()
     start_date = timeline_schema.time_start.date()
     end_date = timeline_schema.time_end.date()
@@ -334,7 +334,7 @@ def compile_date_hashmap(timeline_schema):
 def add_downtimes_to_date_hashmap(
     date_hashmap: dict, timeline_schema: schemas.GetDowntimeForSpecifiedUser
 ):
-    """ Добавление таймлайнов простоя в сводную по времени """
+    """Добавление таймлайнов простоя в сводную по времени"""
     for date in deepcopy(date_hashmap):
         if len(date_hashmap[date]) == 0:
             date_hashmap[date] = [
@@ -378,7 +378,7 @@ def compile_start_downtime_list(
     exodus_date: str,
     downtime_list: list,
 ):
-    """ Фомирование начала списка временного интервала, для указания времени простоев """
+    """Фомирование начала списка временного интервала, для указания времени простоев"""
     if (
         timeline.time_start.strftime(DELTA_TIME_FORMAT)
         <= timeline_schema.time_start_work
@@ -401,7 +401,7 @@ def compile_middle_downtime_list(
     exodus_date: str,
     downtime_list: list,
 ):
-    """ Фомирование середины списка временного интервала, для указания времени простоев """
+    """Фомирование середины списка временного интервала, для указания времени простоев"""
     if previous_timeline.time_end.strftime(
         DELTA_TIME_FORMAT
     ) == timeline.time_start.strftime(DELTA_TIME_FORMAT):
@@ -421,7 +421,7 @@ def compile_end_downtime_list(
     exodus_date: str,
     downtime_list: list,
 ):
-    """ Фомирование конца списка временного интервала, для указания времени простоев """
+    """Фомирование конца списка временного интервала, для указания времени простоев"""
     if (
         timeline.time_end.strftime(DELTA_TIME_FORMAT)
         >= timeline_schema.time_end_work
@@ -438,7 +438,7 @@ def compile_end_downtime_list(
 def compile_downtime_for_start_time_interval(
     date: str, timeline_schema, timeline: models.TimeIntervals
 ):
-    """ Формирование простоя в начале временного интервала """
+    """Формирование простоя в начале временного интервала"""
     return get_downtime_timeline(
         datetime(
             year=int(date.split("-")[0]),
@@ -464,7 +464,7 @@ def compile_downtime_for_middle_time_interval(
     previous_timeline: models.TimeIntervals,
     timeline_schema,
 ):
-    """ Формирование простоя в середине временного интервала """  
+    """Формирование простоя в середине временного интервала"""
     return get_downtime_timeline(
         datetime(
             year=int(date.split("-")[0]),
@@ -489,7 +489,7 @@ def compile_downtime_for_end_time_interval(
     timeline: models.TimeIntervals,
     timeline_schema,
 ):
-    """ Формирование простоя в конце временного интервала """ 
+    """Формирование простоя в конце временного интервала"""
     return get_downtime_timeline(
         datetime(
             year=int(date.split("-")[0]),
@@ -522,14 +522,14 @@ def get_downtime_timeline(
 def __compile_downtime_day(
     timeline_schema: schemas.GetDowntimeForSpecifiedUser, date: str
 ):
-    """ Создание дня-простоя по схеме таймлайна """
+    """Создание дня-простоя по схеме таймлайна"""
     return __create_downtime_via_timeline_schema(timeline_schema, date)
 
 
 def __create_downtime_via_timeline_schema(
     timeline_schema: schemas.GetDowntimeForSpecifiedUser, date: str
 ):
-    """ Создание таймлайна-простоя по схеме таймлайна """
+    """Создание таймлайна-простоя по схеме таймлайна"""
     return __create_temp_timeline(
         datetime(
             year=int(date.split("-")[0]),
@@ -558,7 +558,7 @@ def __create_temp_timeline(
     activity="00:00",
     id_: str = "This is downtime timeline, 'id' - NOT EXIST",
 ):
-    """ Создание таймлайна-затычки для указания простоя """
+    """Создание таймлайна-затычки для указания простоя"""
     timeline = schemas.CreateTimeline
     timeline.time_start = time_start
     timeline.time_end = time_end
@@ -626,7 +626,7 @@ async def __get_summary_timelines_for_specified_user(
 async def __get_timelines_all_users(
     timeline_schema: schemas.GetTimelinesAllUsers,
 ):
-    """ Получение таймлайнов всех пользователей """
+    """Получение таймлайнов всех пользователей"""
     logger.log_start(__get_timelines_all_users, timeline_schema)
     try:
 
@@ -647,7 +647,7 @@ async def __get_timelines_all_users(
 
 
 def compile_timelines_range(timeline_schema: schemas.GetTimelinesAllUsers):
-    """ Формирование старта и начала таймлайна """
+    """Формирование старта и начала таймлайна"""
     timeline_schema.time_start = prepare_timeline_time(
         timeline_schema.time_start
         if DEFAULT_TIME not in timeline_schema.time_start
@@ -666,7 +666,7 @@ def __get_all_timeline_in_the_range(
     time_stop: datetime,
     timelines_list: list[schemas.CreateTimeline],
 ):
-    """ Получение всех таймлайнов в диапазоне времени """
+    """Получение всех таймлайнов в диапазоне времени"""
     result = []
     for current_timeline in timelines_list:
         # ? На подумать, нужно ли игнорировать не закрытые таймлайны
@@ -717,37 +717,45 @@ async def __stop_timeline(timeline_schema: schemas.StopTimeline):
 async def __create_timeline(timeline_schema: schemas.InputTimeline):
     """Создание таймлайна"""
 
-    # создание временной схемы
-    prepared_timeline_schema = prepare_timeline_schemas(timeline_schema)
-
-    prepared_timeline_schema.time_start = prepare_timeline_time(
-        prepared_timeline_schema.time_start
-        if DEFAULT_TIME not in prepared_timeline_schema.time_start
+    timeline_schema.time_start = prepare_timeline_time(
+        timeline_schema.time_start
+        if DEFAULT_TIME not in timeline_schema.time_start
         else datetime.now().strftime(TIME_FORMAT)
     )
 
-    prepared_timeline_schema.time_end = (
-        prepare_timeline_time(prepared_timeline_schema.time_end)
-        if DEFAULT_TIME not in prepared_timeline_schema.time_end
+    timeline_schema.time_end = (
+        prepare_timeline_time(timeline_schema.time_end)
+        if DEFAULT_TIME not in timeline_schema.time_end
         else prepare_timeline_time(
             datetime.now().strftime(NOT_COMPILE_TIME_FORMAT)
         )
     )
-    # Проверка корректности указания старта и конца таймлайна
-    if prepared_timeline_schema.time_end < prepared_timeline_schema.time_start:
-        raise Exception(
-            f"End timeline - {prepared_timeline_schema.time_end } > {prepared_timeline_schema.time_start}"
+
+    # создание временной схемы
+    prepared_timeline_schema = prepare_timeline_schemas(timeline_schema)
+    if prepared_timeline_schema.time_end.strftime(
+        TIME_FORMAT
+    ) != datetime.now().strftime(NOT_COMPILE_TIME_FORMAT):
+
+        # Проверка корректности указания старта и конца таймлайна
+        if (
+            prepared_timeline_schema.time_end
+            < prepared_timeline_schema.time_start
+        ):
+            raise Exception(
+                f"End timeline - {prepared_timeline_schema.time_end } > {prepared_timeline_schema.time_start}"
+            )
+
+        checked_delta = (
+            prepared_timeline_schema.time_end
+            - prepared_timeline_schema.time_start
         )
 
-    checked_delta = (
-        prepared_timeline_schema.time_end - prepared_timeline_schema.time_start
-    )
-
-    # Если таймлайн больше одного дня - он будет считаться некорректным
-    if checked_delta.days != 0:
-        raise Exception(
-            f"Detect incorrect delta between {prepared_timeline_schema.time_end } and {prepared_timeline_schema.time_start} delta - {checked_delta}"
-        )
+        # Если таймлайн больше одного дня - он будет считаться некорректным
+        if checked_delta.days != 0:
+            raise Exception(
+                f"Detect incorrect delta between {prepared_timeline_schema.time_end } and {prepared_timeline_schema.time_start} delta - {checked_delta}"
+            )
 
     # Если таймаут создан, но не имеет даты в конце, то он не считается закрытым, и не имеет просчитанной активности
     if prepared_timeline_schema.time_end.strftime(
