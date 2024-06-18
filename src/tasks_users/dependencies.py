@@ -10,6 +10,7 @@ class SummaryActivityFields(str, Enum):
 
 
 class SummaryActivity:
+    """ Класс описывающий и калькулирующий сводные часы трудозатрат для таймлайнов и задач """
     SummaryActivityCheckNeeded = False
 
     def __init__(self, hours: int = 0, minutes: int = 0) -> None:
@@ -18,6 +19,7 @@ class SummaryActivity:
         SummaryActivity.SummaryActivityCheckNeeded = True
 
     def __validate_input(self, name: str, value: Any):
+        """ Выбор валидирующих правил """
 
         validate_rules = {
             SummaryActivityFields.HOURS: self.__validate_hours,
@@ -27,6 +29,7 @@ class SummaryActivity:
         return validate_rules(value)
 
     def __setattr__(self, name: str, value: Any) -> None:
+        """ Переопределение системного метода для вызова нужных валидаторов при изменении значений """
         if SummaryActivity.SummaryActivityCheckNeeded is False:
             self.__dict__[name] = value
             return self.__dict__[name]
@@ -39,6 +42,7 @@ class SummaryActivity:
         return self.__dict__[name]
 
     def __validate_hours(self, value: Any):
+        """ Валидация часов """
         try:
             result_value = int(value)
 
@@ -48,6 +52,7 @@ class SummaryActivity:
             pass
 
     def __validate_minutes(self, value: Any):
+        """ Валидация минут """
         try:
             result_value = int(value)
 
@@ -61,7 +66,9 @@ class SummaryActivity:
             pass
 
     def __str__(self) -> str:
+        """ Переопределение системного метода для отображения часов в формате строки """
         return f"{self.__format_time_segment(self.hours)}:{self.__format_time_segment(self.minutes)}"
 
     def __format_time_segment(self, value: int):
+        """ Форматирование сегмента """
         return f"0{value}" if value < 10 else f"{value}"
