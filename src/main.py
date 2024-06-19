@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from models.db_helper import db_helper
 from models.base import Base
-from alembic.config import Config
-from alembic import command
+# from alembic.config import Config
+# from alembic import command
 
 # __routers__
 
@@ -21,9 +21,9 @@ loop = asyncio.get_event_loop()
 # __lifespan__
 
 
-def run_migrations():
-    alembic_config = Config("alembic.ini")
-    command.upgrade(alembic_config, "718bcd5cfff0")
+# def run_migrations():
+#     alembic_config = Config("alembic.ini")
+#     command.upgrade(alembic_config, "718bcd5cfff0")
 
 
 @asynccontextmanager
