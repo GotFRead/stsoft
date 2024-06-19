@@ -2,6 +2,7 @@ from httpx import AsyncClient
 
 
 async def test_create_first_user(async_client: AsyncClient):
+    """ Создание тестового пользователя """
     response = await async_client.post(
         "/users/",
         json={
@@ -14,6 +15,7 @@ async def test_create_first_user(async_client: AsyncClient):
 
 
 async def test_create_second_user(async_client: AsyncClient):
+    """ Создание второго тестового пользователя """
     response = await async_client.post(
         "/users/",
         json={
@@ -26,6 +28,7 @@ async def test_create_second_user(async_client: AsyncClient):
 
 
 async def test_create_first_task(async_client: AsyncClient):
+    """ Создание тестовой задачи для первого пользователя """
     response = await async_client.post(
         "/tasks/create_task",
         json={
@@ -40,6 +43,7 @@ async def test_create_first_task(async_client: AsyncClient):
 
 
 async def test_create_second_task(async_client: AsyncClient):
+    """ Создание тестовой задачи для второго пользователя """
     response = await async_client.post(
         "/tasks/create_task",
         json={
@@ -54,6 +58,7 @@ async def test_create_second_task(async_client: AsyncClient):
 
 
 async def test_get_all_tasks(async_client: AsyncClient):
+    """ Получение задач всех пользователей"""
     response = await async_client.get("/tasks/")
 
     assert response.status_code == 200
@@ -78,6 +83,7 @@ async def test_get_all_tasks(async_client: AsyncClient):
 
 
 async def test_create_first_timeline(async_client: AsyncClient):
+    """ Создание первого таймлайна """
     response = await async_client.post(
         "/timelines/create_new_timeline",
         json={
@@ -108,6 +114,7 @@ async def test_create_second_timeline(async_client: AsyncClient):
 
 
 async def test_get_timeline(async_client: AsyncClient):
+    """ Получение таймлайна """
     response = await async_client.get(
         "/timelines/",
     )
@@ -137,6 +144,7 @@ async def test_get_timeline(async_client: AsyncClient):
 
 
 async def test_get_all_tasks_after_add_timeline(async_client: AsyncClient):
+    """ Получение всех задач после добавления таймлайна """
     response = await async_client.get("/tasks/")
 
     assert response.status_code == 200
@@ -161,6 +169,7 @@ async def test_get_all_tasks_after_add_timeline(async_client: AsyncClient):
 
 
 async def test_get_timelines_for_specified_user(async_client: AsyncClient):
+    """ Получение таймлайнов для конкретного пользователя  """
     response = await async_client.post(
         "/timelines/get_timelines_for_specified_user",
         json={
@@ -189,6 +198,7 @@ async def test_get_timelines_for_specified_user(async_client: AsyncClient):
 async def test_get_timelines_for_second_specified_user(
     async_client: AsyncClient,
 ):
+    """ Получение таймлайнов для второго пользователя  """
     response = await async_client.post(
         "/timelines/get_timelines_for_specified_user",
         json={
@@ -215,6 +225,7 @@ async def test_get_timelines_for_second_specified_user(
 
 
 async def test_get_summary_activity_for_first_user(async_client: AsyncClient):
+    """ Получение суммарной активности для конкретного пользователя  """
     response = await async_client.post(
         "/timelines/get_summary_timeline_for_specified_user",
         json={
@@ -234,6 +245,7 @@ async def test_get_summary_activity_for_first_user(async_client: AsyncClient):
 
 
 async def test_get_summary_activity_for_second_user(async_client: AsyncClient):
+    """ Получение суммарной активности для второго пользователя  """
     response = await async_client.post(
         "/timelines/get_summary_timeline_for_specified_user",
         json={
@@ -255,6 +267,7 @@ async def test_get_summary_activity_for_second_user(async_client: AsyncClient):
 async def test_get_downtime_and_timeline_for_specified_user(
     async_client: AsyncClient,
 ):
+    """ Получение времени простоев для первого пользователя  """
     response = await async_client.post(
         "/timelines/get_downtime_and_timeline_for_specified_user",
         json={
@@ -300,6 +313,7 @@ async def test_get_downtime_and_timeline_for_specified_user(
 
 
 async def test_delete_first_user(async_client: AsyncClient):
+    """ Удаление первого пользователя """
     response = await async_client.delete(
        "/users/1",
     )
@@ -308,6 +322,7 @@ async def test_delete_first_user(async_client: AsyncClient):
 
 
 async def test_delete_second_user(async_client: AsyncClient):
+    """ Удаление второго пользователя """
     response = await async_client.delete(
         "/users/2",
     )
@@ -315,6 +330,7 @@ async def test_delete_second_user(async_client: AsyncClient):
 
 
 async def test_get_timeline_after_all_cascade_delete(async_client: AsyncClient):
+    """ Получение таймлайнов после касскадного удаления """
     response = await async_client.get(
         "/timelines/",
     )
