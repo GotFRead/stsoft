@@ -20,7 +20,7 @@ class PatchTask(CreateTask):
     id: int
     task_id: Annotated[str, MaxLen(256)] = "This field will be not modified"
     description: Annotated[str, MaxLen(256)] = "This field will be not modified"
-    owner_id: int = "This field will be not modified"
+    owner_id: int | str = "This field will be not modified"
 
 
 class DeleteTask(BaseModel):

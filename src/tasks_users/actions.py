@@ -118,9 +118,9 @@ async def __patch_task(user_schemas: schemas.CreateTask):
     try:
         session = db_helper.get_scoped_session()
 
-        new_user = await __update_task_info_partial(session, user_schemas)
+        new_task = await __update_task_info_partial(session, user_schemas)
 
-        session.add(new_user)
+        session.add(new_task)
 
         await session.commit()
 
@@ -152,16 +152,17 @@ async def __update_task_info_partial(
     session: AsyncSession, task_schemas: schemas.CreateTask
 ):
 
-    changed_user: models.Tasks = await get_task_via_id(
-        session=session, user_id=task_schemas.id
+    changed_task: models.Tasks = await get_task_via_id(
+        session=session, task_id=task_schemas.id
     )
 
     for name, value in task_schemas.dict().items():
-        if getattr(task_schemas, name) == "This field will be not modified":
+        attr = getattr(task_schemas, name)
+        if isinstance(attr, str) and "This field will be not modified" in attr:
             continue
-        setattr(changed_user, name, value)
+        setattr(changed_task, name, value)
 
-    return changed_user
+    return changed_task
 
 
 async def get_task_via_id(session: AsyncSession, task_id: int):
