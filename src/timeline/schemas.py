@@ -30,14 +30,17 @@ class CreateTimeline(InputTimeline):
     activity: str = f"{datetime.today().strftime(ACTIVITY_TIME_FORMAT)}"
 
 
-class PatchTimeline(CreateTimeline):
+class PatchTimeline(InputTimeline):
     id: int
-    task_id: int = "This field will be not modified"
-    owner_id: int = "This field will be not modified"
+    task_id: int | str = "This field will be not modified"
+    owner_id: int | str = "This field will be not modified"
     description: Annotated[str, MaxLen(256)] = "This field will be not modified"
-    time_start: str
-    time_end: str = None
-    activity: str = "This field will be not modified"
+    time_start: str | datetime = (
+        f"{datetime.now().strftime(SHORT_TIME_FORMAT)} --:-- - 'This field will be not modified'"
+    )
+    time_end: str | datetime = (
+        f"{datetime.today().strftime(SHORT_TIME_FORMAT)} --:-- 'This field will be not modified' "
+    )
 
 
 class StopTimeline(BaseModel):

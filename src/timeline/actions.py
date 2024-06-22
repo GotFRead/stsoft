@@ -116,8 +116,7 @@ async def create_new_timeline(timeline_schema: schemas.InputTimeline):
     return result
 
 
-# ? Оставил до востребования
-async def start_timeline(timeline_schema: schemas.CreateTimeline):
+async def patch_timeline(timeline_schema: schemas.PatchTimeline):
     try:
         result = await asyncio.wait_for(
             __patch_timeline(timeline_schema), timeout_execute_command
@@ -1054,31 +1053,67 @@ def get_summary_activity(hours: int, minutes: int):
     return task_dependencies.SummaryActivity(hours, minutes)
 
 
-async def __patch_timeline(
-    session: AsyncSession, new_timeline_schema: schemas.CreateTimeline
-):
+async def __patch_timeline(new_timeline_schema: schemas.PatchTimeline):
     """Изменение таймлайна"""
     logger.info(f"Start create TimeIntervals - {new_timeline_schema}")
     try:
+
+        session = db_helper.get_scoped_session()
 
         changed_timeline: models.TimeIntervals = await get_timeline_via_id(
             session=session, timeline_id=new_timeline_schema.id
         )
 
-        for name, value in new_timeline_schema.dict().items():
-            if (
-                getattr(changed_timeline, name)
-                == "This field will be not modified"
-            ):
-                # Проверка поля (при указанном значении поле будет проигнорировано)
-                continue
-            setattr(changed_timeline, name, value)
+        copy_for_change_task = deepcopy(changed_timeline)
 
-        return changed_timeline
+        changed_timeline: models.TimeIntervals = override_changed_property(
+            new_timeline_schema, changed_timeline
+        )
+
+        changed_timeline = convert_str_to_datetime(changed_timeline)
+
+        __get_timeline_activity(changed_timeline)
+
+        # Удаляем часы с задачи которой был прикреплен таймлайн
+        await __actualization_task(session, copy_for_change_task, False)
+
+        # Добавляем часы к соответствующей задаче
+        await __actualization_task(session, changed_timeline)
+
+        session.add(changed_timeline)
+
+        await session.commit()
 
     except Exception as err:
         logger.error(f"__patch_timeline raise exception - {err}")
         return status.HTTP_400_BAD_REQUEST
+
+    return status.HTTP_200_OK
+
+
+def override_changed_property(
+    new_timeline_schema: schemas.PatchTimeline,
+    changed_timeline: models.TimeIntervals,
+):
+
+    for name, value in new_timeline_schema.dict().items():
+        attr = getattr(new_timeline_schema, name)
+        if isinstance(attr, str) and "This field will be not modified" in attr:
+            # Проверка поля (при указанном значении поле будет проигнорировано)
+            continue
+        setattr(changed_timeline, name, value)
+
+    return changed_timeline
+
+
+def convert_str_to_datetime(timeline: schemas.CreateTimeline):
+    for time_section in ["time_end", "time_start"]:
+        attr = getattr(timeline, time_section)
+        if isinstance(attr, str):
+            setattr(timeline, time_section, prepare_timeline_time(attr))
+        continue
+
+    return timeline
 
 
 def prepare_timeline_time(time: str):
